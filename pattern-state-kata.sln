@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LoanCase.Domain", "src\Modu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LoanCase.Tests", "src\Modules\LoanCase\LoanCase.Tests\LoanCase.Tests.csproj", "{9BE2267A-5B00-429A-B683-B6E719452DE0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LoanCase.Application", "Src\Modules\LoanCase\LoanCase.Application\LoanCase.Application.csproj", "{F40B458E-326B-4A7B-BA09-680E98630FDE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +46,18 @@ Global
 		{9BE2267A-5B00-429A-B683-B6E719452DE0}.Release|x64.Build.0 = Release|Any CPU
 		{9BE2267A-5B00-429A-B683-B6E719452DE0}.Release|x86.ActiveCfg = Release|Any CPU
 		{9BE2267A-5B00-429A-B683-B6E719452DE0}.Release|x86.Build.0 = Release|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Debug|x64.Build.0 = Debug|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Debug|x86.Build.0 = Debug|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Release|x64.ActiveCfg = Release|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Release|x64.Build.0 = Release|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Release|x86.ActiveCfg = Release|Any CPU
+		{F40B458E-326B-4A7B-BA09-680E98630FDE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -53,5 +67,6 @@ Global
 		{8FE4A66A-DEE2-5960-39B7-1F5314E2BCEC} = {EC447DCF-ABFA-6E24-52A5-D7FD48A5C558}
 		{24E6D9FD-174F-47BD-B3CC-1E8624CEFB06} = {8FE4A66A-DEE2-5960-39B7-1F5314E2BCEC}
 		{9BE2267A-5B00-429A-B683-B6E719452DE0} = {8FE4A66A-DEE2-5960-39B7-1F5314E2BCEC}
+		{F40B458E-326B-4A7B-BA09-680E98630FDE} = {8FE4A66A-DEE2-5960-39B7-1F5314E2BCEC}
 	EndGlobalSection
 EndGlobal
