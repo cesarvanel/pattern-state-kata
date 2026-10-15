@@ -13,6 +13,7 @@
         "packagesPath": "C:\\Users\\Crina Studio\\.nuget\\packages\\",
         "outputPath": "D:\\riders\\pattern-state-kata\\src\\Modules\\LoanCase\\Domain\\obj\\",
         "projectStyle": "PackageReference",
+        "centralPackageVersionsManagementEnabled": true,
         "configFilePaths": [
           "C:\\Users\\Crina Studio\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
@@ -45,6 +46,13 @@
         "net10.0": {
           "framework": "net10.0",
           "targetAlias": "net10.0",
+          "centralPackageVersions": {
+            "coverlet.collector": "6.0.2",
+            "FluentAssertions": "6.12.1",
+            "Microsoft.NET.Test.Sdk": "17.11.1",
+            "xunit": "2.9.2",
+            "xunit.runner.visualstudio": "2.8.2"
+          },
           "imports": [
             "net461",
             "net462",
