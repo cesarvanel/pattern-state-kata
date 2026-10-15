@@ -60,7 +60,7 @@ dotnet new classlib -o src/Modules/LoanCase/LoanCase.Domain -n LoanCase.Domain
 
 # Create the xUnit Test Project directly in its dedicated test path
 dotnet new xunit -o src/Modules/LoanCase/LoanCase.Tests -n LoanCase.Tests
-```
+``
 
 🔍 **Explanation of the Options:**
 - `dotnet new`: Instructs the .NET CLI to generate a new project from a built-in template.
