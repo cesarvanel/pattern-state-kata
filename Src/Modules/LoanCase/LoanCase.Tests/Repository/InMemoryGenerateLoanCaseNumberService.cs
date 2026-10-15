@@ -14,4 +14,9 @@ public class InMemoryGenerateLoanCaseNumberService(int? counter) : IGenerateLoan
 
         return Task.FromResult(caseNumber);
     }
+
+    public void ResetCounter()
+    {
+        Interlocked.Exchange(ref _counter, 0);
+    }
 }

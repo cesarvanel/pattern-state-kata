@@ -8,7 +8,7 @@ public record Amount
     {
         if (value < 0)
         {
-            throw new InvalidAmountValue(value);
+            throw new InvalidAmountValueException(value);
         }
 
         Value = value;

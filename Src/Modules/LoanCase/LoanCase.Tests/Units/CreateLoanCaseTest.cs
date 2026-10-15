@@ -60,6 +60,23 @@ public class CreateLoanCaseTest
     [Fact]
     public async Task Create_Should_Fails_When_Existed_LoanCase_With_Same_Number()
     {
+        await BuildSut();
+        CreateLoanCaseCommand command = new CreateLoanCaseCommandBuilder()
+            .WithDocuments(GenerateAllTypes())
+            .Build();
+
+        CreateLoanCaseResponse result = await _handler.HandleAsync(command);
+
+        Assert.False(result.IsCreated, result.Message);
+    }
+
+    private async Task BuildSut()
+    {
+        string loanNumber = await _generateLoanCaseNumberService.Execute();
+        Domain.LoanCase loanCase = Domain.LoanCase.Create(Guid.NewGuid(), Guid.NewGuid(), loanNumber, 25_000_000m,
+            DateTime.UtcNow, GenerateAllTypes());
+        await _loanCaseRepository.AddAsync(loanCase);
+        _generateLoanCaseNumberService.ResetCounter();
     }
 
 

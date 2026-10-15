@@ -3,4 +3,6 @@
 public interface ILoanCaseRepository
 {
     Task AddAsync(LoanCase loanCase);
+
+    Task<bool> ExistsByNumberAsync(string loanCaseNumber);
 }

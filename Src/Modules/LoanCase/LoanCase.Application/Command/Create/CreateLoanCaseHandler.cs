@@ -1,4 +1,5 @@
-﻿using LoanCase.Domain.Port.Out;
+﻿using LoanCase.Domain.Exceptions;
+using LoanCase.Domain.Port.Out;
 using LoanCase.Domain.Services;
 
 using Shared.Domain.Exceptions;
@@ -17,6 +18,13 @@ public class CreateLoanCaseHandler(
         try
         {
             string loanCaseNumber = await generateLoanCaseNumberService.Execute();
+            bool isAlreadyInUse = await loanCaseRepository.ExistsByNumberAsync(loanCaseNumber);
+
+            if (isAlreadyInUse)
+            {
+                throw new LoanCaseNumberAlreadyInUseException(loanCaseNumber);
+            }
+
             loanCase = Domain.LoanCase.Create(command.Id, command.BorrowerId, loanCaseNumber,
                 createdAt: new DateTime(), amount: command.Amount, attachedDocuments: command.AttachedDocuments);
         }
