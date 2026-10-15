@@ -3,11 +3,14 @@ using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Messages;
 using LoanCase.Domain.Vo;
 
+using LoanCaseState = LoanCase.Domain.Enum.LoanCaseState;
+
 namespace LoanCase.Domain;
 
 public class LoanCase
 {
     private readonly List<AttachedDocument> _attachedDocuments = [];
+    private LoanCaseState _state;
 
     private LoanCase(Guid id, Guid borrowerId, string number, DateTime createdAt, Amount amount,
         List<AttachedDocument> attachedDocuments)
