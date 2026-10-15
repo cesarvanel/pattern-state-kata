@@ -1,10 +1,13 @@
 ﻿using LoanCase.Domain.Port.Out;
+using LoanCase.Domain.Services;
 
 using Shared.Domain.Exceptions;
 
 namespace LoanCase.Application.Command.Create;
 
-public class CreateLoanCaseHandler(ILoanCaseRepository loanCaseRepository)
+public class CreateLoanCaseHandler(
+    ILoanCaseRepository loanCaseRepository,
+    IGenerateLoanCaseNumberService generateLoanCaseNumberService)
 {
     public async Task<CreateLoanCaseResponse> HandleAsync(CreateLoanCaseCommand command)
     {
@@ -13,7 +16,8 @@ public class CreateLoanCaseHandler(ILoanCaseRepository loanCaseRepository)
 
         try
         {
-            loanCase = Domain.LoanCase.Create(command.Id, command.BorrowerId, "DOSSIER-1-20026",
+            string loanCaseNumber = await generateLoanCaseNumberService.Execute();
+            loanCase = Domain.LoanCase.Create(command.Id, command.BorrowerId, loanCaseNumber,
                 createdAt: new DateTime(), amount: command.Amount, attachedDocuments: command.AttachedDocuments);
         }
         catch (DomainException e)

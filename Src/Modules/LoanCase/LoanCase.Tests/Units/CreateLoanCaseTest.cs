@@ -8,13 +8,15 @@ namespace LoanCase.Tests.Units;
 
 public class CreateLoanCaseTest
 {
+    private readonly InMemoryGenerateLoanCaseNumberService _generateLoanCaseNumberService;
     private readonly CreateLoanCaseHandler _handler;
     private readonly InMemoryLoanRepository _loanCaseRepository;
 
     public CreateLoanCaseTest()
     {
         _loanCaseRepository = new InMemoryLoanRepository();
-        _handler = new CreateLoanCaseHandler(_loanCaseRepository);
+        _generateLoanCaseNumberService = new InMemoryGenerateLoanCaseNumberService(null);
+        _handler = new CreateLoanCaseHandler(_loanCaseRepository, _generateLoanCaseNumberService);
     }
 
     [Fact]
@@ -25,7 +27,11 @@ public class CreateLoanCaseTest
             await _handler.HandleAsync(command);
 
         Assert.True(result.IsCreated, result.Message);
-        Assert.Single(_loanCaseRepository.LoanCases.Values);
+        Domain.LoanCase loanCase = Assert.Single(_loanCaseRepository.LoanCases.Values);
+
+        Assert.NotEmpty(loanCase.AttachedDocuments);
+        Assert.Equal(command.Amount, loanCase.Amount.Value);
+        Assert.Equal(command.Id, loanCase.Id);
     }
 
     [Fact]
@@ -49,6 +55,11 @@ public class CreateLoanCaseTest
 
         Assert.False(result.IsCreated, result.Message);
         Assert.Empty(_loanCaseRepository.LoanCases.Values);
+    }
+
+    [Fact]
+    public async Task Create_Should_Fails_When_Existed_LoanCase_With_Same_Number()
+    {
     }
 
 

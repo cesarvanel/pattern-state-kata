@@ -7,9 +7,9 @@ namespace LoanCase.Domain;
 
 public class LoanCase
 {
-    private List<AttachedDocument> _attachedDocuments = [];
+    private readonly List<AttachedDocument> _attachedDocuments = [];
 
-    private LoanCase(Guid id, Guid borrowerId, string number, DateTime createdAt, Money amount,
+    private LoanCase(Guid id, Guid borrowerId, string number, DateTime createdAt, Amount amount,
         List<AttachedDocument> attachedDocuments)
     {
         Id = id;
@@ -24,8 +24,9 @@ public class LoanCase
     public Guid BorrowerId { get; private set; }
     public string Number { get; private set; }
     public DateTime CreatedAt { get; private set; }
-    public Money Amount { get; private set; }
+    public Amount Amount { get; private set; }
 
+    public IReadOnlyCollection<AttachedDocument> AttachedDocuments => _attachedDocuments.AsReadOnly();
 
     public static LoanCase Create(Guid id, Guid borrowerId, string number, decimal amount, DateTime createdAt,
         List<AttachedDocument> attachedDocuments)
@@ -47,6 +48,6 @@ public class LoanCase
             }
         }
 
-        return new LoanCase(id, borrowerId, number, createdAt, new Money(amount), attachedDocuments);
+        return new LoanCase(id, borrowerId, number, createdAt, new Amount(amount), attachedDocuments);
     }
 }
