@@ -14,5 +14,5 @@ public record Amount
         Value = value;
     }
 
-    public decimal Value { get; private set; }
+    public decimal Value { get; }
 }
