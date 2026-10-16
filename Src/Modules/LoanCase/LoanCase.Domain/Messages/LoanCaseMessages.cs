@@ -6,10 +6,12 @@ namespace LoanCase.Domain.Messages;
 public static class LoanCaseMessages
 {
     public const string EmptyAttachedDocument = "Les documents joints ne peuvent pas être vides";
+    public const string LoanCaseNotFound = "Ce dossier n'existe pas ";
 
     public static string RequiredAttachmentDocumentType(AttachedDocumentType attachedDocumentType)
     {
-        return $"La pièce jointe {attachedDocumentType.ToFrenchLabel()} est manquante dans les documents.";
+        return
+            $"La pièce jointe {attachedDocumentType.ToFrenchLabel()} est manquante dans les documents.";
     }
 }
 

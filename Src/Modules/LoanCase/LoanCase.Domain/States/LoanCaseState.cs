@@ -1,9 +1,23 @@
-﻿namespace LoanCase.Domain.States;
+﻿using LoanCase.Domain.Enum;
+using LoanCase.Domain.Exceptions;
+
+namespace LoanCase.Domain.States;
 
 public abstract class LoanCaseState
 {
-    public virtual void Submit(LoanCase loanCase)
+    protected LoanCase _loanCase;
+
+    public abstract LoanCaseStatus Status { get; }
+
+    internal void SetLoanCase(LoanCase loanCase)
     {
-        throw new InvalidOperationException("Le dossier ne peut pas être soumis depuis son état actuel.");
+        _loanCase = loanCase;
+    }
+
+
+    public virtual void Submit()
+    {
+        throw new InvalidLoanCaseStateActionException(
+            "Action non autorisée");
     }
 }
