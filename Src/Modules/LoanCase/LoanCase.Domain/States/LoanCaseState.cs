@@ -20,7 +20,17 @@ public abstract class LoanCaseState
         DefaultStateImplementation();
     }
 
+    public virtual void SendToCommittee()
+    {
+        DefaultStateImplementation();
+    }
+
     public virtual void Approve()
+    {
+        DefaultStateImplementation();
+    }
+
+    public virtual void Reject()
     {
         DefaultStateImplementation();
     }

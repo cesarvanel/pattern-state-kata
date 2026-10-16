@@ -6,8 +6,14 @@ public sealed class UnderReviewState : LoanCaseState
 {
     public override LoanCaseStatus Status => LoanCaseStatus.UnderReview;
 
-    public override void Approve()
+
+    public override void Reject()
     {
-        _loanCase.TransitionTo(new ApprovedState());
+        _loanCase.TransitionTo(new RejectedState());
+    }
+
+    public override void SendToCommittee()
+    {
+        _loanCase.TransitionTo(new CommitteeReviewState());
     }
 }

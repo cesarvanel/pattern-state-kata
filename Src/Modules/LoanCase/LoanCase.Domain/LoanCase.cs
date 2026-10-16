@@ -33,6 +33,7 @@ public class LoanCase
     public string Number { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public Amount Amount { get; private set; }
+    public RejectionDetails? RejectionDetails { get; private set; }
 
     public IReadOnlyCollection<AttachedDocument> AttachedDocuments =>
         _attachedDocuments.AsReadOnly();
@@ -79,10 +80,22 @@ public class LoanCase
         _state.Submit();
     }
 
+    public void Reject(RejectionDetails rejectionDetails)
+    {
+        _state.Reject();
+        RejectionDetails = rejectionDetails;
+    }
+
+    public void SendToCommittee()
+    {
+        _state.SendToCommittee();
+    }
+
     public void Approve()
     {
         _state.Approve();
     }
+
 
     internal void TransitionTo(LoanCaseState nextState)
     {

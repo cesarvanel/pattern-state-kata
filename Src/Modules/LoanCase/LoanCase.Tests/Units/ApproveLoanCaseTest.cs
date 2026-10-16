@@ -40,7 +40,7 @@ public class ApproveLoanCaseTest
     private async Task BuildSut()
     {
         Domain.LoanCase loanCase = new LoanCaseSut().WithLoanCaseId(_loanCaseId)
-            .WithStatus(LoanCaseStatus.UnderReview).Build();
+            .WithStatus(LoanCaseStatus.CommitteeReview).Build();
 
         await _loanRepository.AddAsync(loanCase);
     }
