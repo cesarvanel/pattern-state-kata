@@ -77,7 +77,7 @@ public class CreateLoanCaseTest
 
     private async Task BuildSut()
     {
-        string loanNumber = await _generateLoanCaseNumberService.Execute();
+        string loanNumber = await _generateLoanCaseNumberService.ExecuteAsync();
         Domain.LoanCase loanCase = Domain.LoanCase.Create(Guid.NewGuid(),
             Guid.NewGuid(),
             loanNumber,

@@ -2,5 +2,5 @@
 
 public interface IGenerateLoanCaseNumberService
 {
-    Task<string> Execute();
+    Task<string> ExecuteAsync();
 }

@@ -17,6 +17,16 @@ public abstract class LoanCaseState
 
     public virtual void Submit()
     {
+        DefaultStateImplementation();
+    }
+
+    public virtual void Approve()
+    {
+        DefaultStateImplementation();
+    }
+
+    private static void DefaultStateImplementation()
+    {
         throw new InvalidLoanCaseStateActionException(
             "Action non autorisée");
     }

@@ -79,6 +79,11 @@ public class LoanCase
         _state.Submit();
     }
 
+    public void Approve()
+    {
+        _state.Approve();
+    }
+
     internal void TransitionTo(LoanCaseState nextState)
     {
         _state = nextState;

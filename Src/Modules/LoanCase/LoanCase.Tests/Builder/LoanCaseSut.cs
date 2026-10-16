@@ -68,6 +68,11 @@ public sealed class LoanCaseSut
             loanCase.Submit();
         }
 
+        if (_initialStatus == LoanCaseStatus.Approved)
+        {
+            loanCase.Approve();
+        }
+
         return loanCase;
     }
 }

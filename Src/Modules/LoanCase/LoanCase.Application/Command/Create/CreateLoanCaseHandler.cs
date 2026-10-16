@@ -17,7 +17,7 @@ public class CreateLoanCaseHandler(
 
         try
         {
-            string loanCaseNumber = await generateLoanCaseNumberService.Execute();
+            string loanCaseNumber = await generateLoanCaseNumberService.ExecuteAsync();
             bool isAlreadyInUse = await loanCaseRepository.ExistsByNumberAsync(loanCaseNumber);
 
             if (isAlreadyInUse)
@@ -25,8 +25,12 @@ public class CreateLoanCaseHandler(
                 throw new LoanCaseNumberAlreadyInUseException(loanCaseNumber);
             }
 
-            loanCase = Domain.LoanCase.Create(command.Id, command.BorrowerId, loanCaseNumber,
-                createdAt: new DateTime(), amount: command.Amount, attachedDocuments: command.AttachedDocuments);
+            loanCase = Domain.LoanCase.Create(command.Id,
+                command.BorrowerId,
+                loanCaseNumber,
+                createdAt: new DateTime(),
+                amount: command.Amount,
+                attachedDocuments: command.AttachedDocuments);
         }
         catch (DomainException e)
         {

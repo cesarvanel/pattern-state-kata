@@ -6,7 +6,7 @@ public class InMemoryGenerateLoanCaseNumberService(int? counter) : IGenerateLoan
 {
     private int _counter = counter ?? 0;
 
-    public Task<string> Execute()
+    public Task<string> ExecuteAsync()
     {
         int nextNumber = Interlocked.Increment(ref _counter);
 
