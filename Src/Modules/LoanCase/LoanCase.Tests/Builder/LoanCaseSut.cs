@@ -63,15 +63,22 @@ public sealed class LoanCaseSut
             Now,
             _attachedDocuments);
 
-        if (_initialStatus == LoanCaseStatus.UnderReview)
-        {
-            loanCase.Submit();
-        }
 
-
-        if (_initialStatus == LoanCaseStatus.CommitteeReview)
+        switch (_initialStatus)
         {
-            loanCase.SendToCommittee();
+            case LoanCaseStatus.Approved or LoanCaseStatus.CommitteeReview:
+                loanCase.Submit();
+                loanCase.SendToCommittee();
+                break;
+
+            case LoanCaseStatus.UnderReview:
+                loanCase.Submit();
+                break;
+
+            case LoanCaseStatus.Draft:
+            default:
+                // Reste en Draft, rien à faire
+                break;
         }
 
         return loanCase;
