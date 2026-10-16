@@ -37,7 +37,7 @@ public sealed class LoanCaseSut
 
     private readonly Guid _borrowerId = Guid.NewGuid();
     private readonly string _loanNumber = "DOSSIER-2026-0001";
-
+    private LoanCaseStatus _initialStatus = LoanCaseStatus.Draft;
     private Guid _loanCaseId = Guid.NewGuid();
 
 
@@ -47,14 +47,27 @@ public sealed class LoanCaseSut
         return this;
     }
 
+    public LoanCaseSut WithStatus(LoanCaseStatus status)
+    {
+        _initialStatus = status;
+        return this;
+    }
+
 
     public Domain.LoanCase Build()
     {
-        return Domain.LoanCase.Create(_loanCaseId,
+        Domain.LoanCase loanCase = Domain.LoanCase.Create(_loanCaseId,
             _borrowerId,
             _loanNumber,
             25_000_000,
             Now,
             _attachedDocuments);
+
+        if (_initialStatus == LoanCaseStatus.UnderReview)
+        {
+            loanCase.Submit();
+        }
+
+        return loanCase;
     }
 }
