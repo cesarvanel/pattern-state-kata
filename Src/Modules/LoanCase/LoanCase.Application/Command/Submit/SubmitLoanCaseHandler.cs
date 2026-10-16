@@ -26,6 +26,7 @@ public sealed class SubmitLoanCaseHandler(ILoanCaseRepository loanCaseRepository
             return response;
         }
 
+        await loanCaseRepository.UpdateAsync(loanCase, ct);
         response.IsSubmitted = true;
 
 

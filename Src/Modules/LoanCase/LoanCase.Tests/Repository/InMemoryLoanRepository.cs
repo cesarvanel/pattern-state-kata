@@ -23,4 +23,10 @@ public class InMemoryLoanRepository : ILoanCaseRepository
     {
         return Task.FromResult(LoanCases.GetValueOrDefault(loanCaseId));
     }
+
+    public Task UpdateAsync(Domain.LoanCase loanCase, CancellationToken ct = default)
+    {
+        LoanCases[loanCase.Id] = loanCase;
+        return Task.CompletedTask;
+    }
 }

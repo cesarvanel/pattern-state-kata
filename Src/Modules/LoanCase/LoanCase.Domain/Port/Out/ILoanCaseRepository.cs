@@ -6,4 +6,5 @@ public interface ILoanCaseRepository
 
     Task<bool> ExistsByNumberAsync(string loanCaseNumber, CancellationToken ct = default);
     Task<LoanCase?> GetByIdAsync(Guid loanCaseId, CancellationToken ct = default);
+    Task UpdateAsync(LoanCase loanCase, CancellationToken ct = default);
 }
