@@ -25,12 +25,13 @@ public abstract class LoanCaseState
         DefaultStateImplementation();
     }
 
-    public virtual void Approve()
+
+    public virtual void Reject()
     {
         DefaultStateImplementation();
     }
 
-    public virtual void Reject()
+    public virtual void Approve()
     {
         DefaultStateImplementation();
     }

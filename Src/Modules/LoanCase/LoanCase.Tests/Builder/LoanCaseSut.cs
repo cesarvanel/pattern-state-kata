@@ -71,7 +71,7 @@ public sealed class LoanCaseSut
 
         if (_initialStatus == LoanCaseStatus.CommitteeReview)
         {
-            loanCase.Submit();
+            loanCase.SendToCommittee();
         }
 
         return loanCase;
