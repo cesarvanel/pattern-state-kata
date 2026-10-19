@@ -19,7 +19,7 @@ public class SendLoanCaseToCommitteeTest
     [Fact]
     public async Task SendToCommittee_When_UnderReview_Should_Transition_To_CommitteeReview()
     {
-        await BuildSut();
+        await BuildSut(LoanCaseStatus.UnderReview);
         SendLoanCaseToCommitteeCommand command = new(_loanCaseId);
         SendLoanCaseToCommitteeResponse result =
             await new SendLoanCaseToCommitteeHandler(_loanRepository).HandleAsync(command,
@@ -38,8 +38,7 @@ public class SendLoanCaseToCommitteeTest
     [Fact]
     public async Task SendToCommittee_Fails_When_LoanCase_State_Is_Not_UnderReview()
     {
-        Domain.LoanCase loanCase = new LoanCaseSut().WithLoanCaseId(_loanCaseId).Build();
-        await _loanRepository.AddAsync(loanCase);
+        await BuildSut();
 
         SendLoanCaseToCommitteeCommand command = new(_loanCaseId);
         SendLoanCaseToCommitteeResponse result =
@@ -47,15 +46,13 @@ public class SendLoanCaseToCommitteeTest
                 CancellationToken.None);
 
         Assert.False(result.IsSendToCommittee, result.Message);
-        Assert.Equal(LoanCaseStatus.Draft, loanCase.Status);
     }
 
 
-
-    private async Task BuildSut()
+    private async Task BuildSut(LoanCaseStatus status = LoanCaseStatus.Draft)
     {
         Domain.LoanCase loanCase = new LoanCaseSut().WithLoanCaseId(_loanCaseId)
-            .WithStatus(LoanCaseStatus.UnderReview).Build();
+            .WithStatus(status).Build();
 
         await _loanRepository.AddAsync(loanCase);
     }

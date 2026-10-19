@@ -5,9 +5,9 @@ namespace LoanCase.Tests.Builder;
 
 public class CreateLoanCaseCommandBuilder
 {
-    private const decimal _amount = 15.000m;
-    private readonly Guid _id = Guid.NewGuid();
+    private const decimal Amount = 15.000m;
     private readonly Guid _borrowerId = Guid.NewGuid();
+    private readonly Guid _id = Guid.NewGuid();
 
     private List<AttachedDocument> _documents = [];
 
@@ -20,6 +20,6 @@ public class CreateLoanCaseCommandBuilder
 
     public CreateLoanCaseCommand Build()
     {
-        return new CreateLoanCaseCommand(_id, _borrowerId, _amount, _documents);
+        return new CreateLoanCaseCommand(_id, _borrowerId, Amount, _documents);
     }
 }

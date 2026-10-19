@@ -85,7 +85,7 @@ public class LoanCase
         Amount amount,
         List<AttachedDocument> attachedDocuments,
         LoanCaseStatus status,
-        RejectionDetails? rejectionDetails = null)
+        RejectionDetails? rejectionDetails)
     {
         LoanCase loanCase = new(id,
             borrowerId,
