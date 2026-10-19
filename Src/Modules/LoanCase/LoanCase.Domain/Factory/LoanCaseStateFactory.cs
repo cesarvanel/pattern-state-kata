@@ -1,7 +1,8 @@
 using LoanCase.Domain.Enum;
 using LoanCase.Domain.Messages;
+using LoanCase.Domain.States;
 
-namespace LoanCase.Domain.States;
+namespace LoanCase.Domain.Factory;
 
 public static class LoanCaseStateFactory
 {

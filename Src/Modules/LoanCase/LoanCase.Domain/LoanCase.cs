@@ -1,5 +1,6 @@
 ﻿using LoanCase.Domain.Enum;
 using LoanCase.Domain.Exceptions;
+using LoanCase.Domain.Factory;
 using LoanCase.Domain.Messages;
 using LoanCase.Domain.States;
 using LoanCase.Domain.Vo;
