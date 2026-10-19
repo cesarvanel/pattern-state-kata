@@ -1,44 +1,49 @@
 ﻿using LoanCase.Domain.Enum;
 using LoanCase.Domain.Exceptions;
+using LoanCase.Domain.Messages;
+using LoanCase.Domain.Vo;
 
 namespace LoanCase.Domain.States;
 
 public abstract class LoanCaseState
 {
-    protected LoanCase _loanCase;
+    protected readonly LoanCase _loanCase;
 
-    public abstract LoanCaseStatus Status { get; }
-
-    internal void SetLoanCase(LoanCase loanCase)
+    protected LoanCaseState(LoanCase loanCase)
     {
         _loanCase = loanCase;
     }
 
+    public abstract LoanCaseStatus Status { get; }
 
     public virtual void Submit()
     {
-        DefaultStateImplementation();
+        ActionNotAllowed(nameof(Submit));
     }
 
     public virtual void SendToCommittee()
     {
-        DefaultStateImplementation();
+        ActionNotAllowed(nameof(SendToCommittee));
     }
 
-
-    public virtual void Reject()
+    public virtual void Reject(RejectionDetails rejectionDetails)
     {
-        DefaultStateImplementation();
+        ActionNotAllowed(nameof(Reject));
     }
 
     public virtual void Approve()
     {
-        DefaultStateImplementation();
+        ActionNotAllowed(nameof(Approve));
     }
 
-    private static void DefaultStateImplementation()
+    public virtual void Close()
+    {
+        ActionNotAllowed(nameof(Close));
+    }
+
+    private void ActionNotAllowed(string action)
     {
         throw new InvalidLoanCaseStateActionException(
-            "Action non autorisée");
+            LoanCaseMessages.ActionNotAllowedInState(action, Status));
     }
 }

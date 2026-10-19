@@ -1,6 +1,8 @@
 ﻿using LoanCase.Domain.Enum;
 using LoanCase.Domain.Vo;
 
+using Shared.Domain.Vo;
+
 namespace LoanCase.Tests.Builder;
 
 public sealed class LoanCaseSut
@@ -66,21 +68,44 @@ public sealed class LoanCaseSut
 
         switch (_initialStatus)
         {
-            case LoanCaseStatus.Approved or LoanCaseStatus.CommitteeReview:
-                loanCase.Submit();
-                loanCase.SendToCommittee();
-                break;
-
             case LoanCaseStatus.UnderReview:
                 loanCase.Submit();
                 break;
 
+            case LoanCaseStatus.CommitteeReview:
+                loanCase.Submit();
+                loanCase.SendToCommittee();
+                break;
+
+            case LoanCaseStatus.Approved:
+                loanCase.Submit();
+                loanCase.SendToCommittee();
+                loanCase.Approve();
+                break;
+
+            case LoanCaseStatus.Rejected:
+                loanCase.Submit();
+                loanCase.Reject(CreateRejectionDetails());
+                break;
+
+            case LoanCaseStatus.Closed:
+                loanCase.Submit();
+                loanCase.SendToCommittee();
+                loanCase.Approve();
+                loanCase.Close();
+                break;
+
             case LoanCaseStatus.Draft:
             default:
-                // Reste en Draft, rien à faire
                 break;
         }
 
         return loanCase;
+    }
+
+    private static RejectionDetails CreateRejectionDetails()
+    {
+        return new RejectionDetails("Documents non conformes",
+            DocumentFile.Create("Lettre_Rejet.pdf", 150, ".pdf"));
     }
 }

@@ -28,7 +28,7 @@ public class CreateLoanCaseHandler(
             loanCase = Domain.LoanCase.Create(command.Id,
                 command.BorrowerId,
                 loanCaseNumber,
-                createdAt: new DateTime(),
+                createdAt: DateTime.UtcNow,
                 amount: command.Amount,
                 attachedDocuments: command.AttachedDocuments);
         }

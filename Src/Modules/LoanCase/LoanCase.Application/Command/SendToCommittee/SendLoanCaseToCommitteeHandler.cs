@@ -7,7 +7,7 @@ namespace LoanCase.Application.Command.SendToCommittee;
 
 public sealed class SendLoanCaseToCommitteeHandler(ILoanCaseRepository loanCaseRepository)
 {
-    public async Task<SendLoanCaseToCommitteeResponse> HandlAsync(
+    public async Task<SendLoanCaseToCommitteeResponse> HandleAsync(
         SendLoanCaseToCommitteeCommand command,
         CancellationToken ct = default)
     {

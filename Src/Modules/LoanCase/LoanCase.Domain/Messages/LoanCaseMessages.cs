@@ -7,6 +7,12 @@ public static class LoanCaseMessages
 {
     public const string EmptyAttachedDocument = "Les documents joints ne peuvent pas être vides";
     public const string LoanCaseNotFound = "Ce dossier n'existe pas ";
+    public const string UnknownLoanCaseStatus = "Statut du dossier de prêt inconnu";
+
+    public static string ActionNotAllowedInState(string action, LoanCaseStatus status)
+    {
+        return $"L'action '{action}' n'est pas autorisée dans l'état '{status}'.";
+    }
 
     public static string RequiredAttachmentDocumentType(AttachedDocumentType attachedDocumentType)
     {

@@ -30,6 +30,7 @@ public class RejectLoanCaseHandler(ILoanCaseRepository loanCaseRepository)
             return response;
         }
 
+        await loanCaseRepository.UpdateAsync(loanCase, ct);
         response.IsRejected = true;
         return response;
     }

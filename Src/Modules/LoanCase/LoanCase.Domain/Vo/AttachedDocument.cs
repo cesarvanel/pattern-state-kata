@@ -37,6 +37,6 @@ public record AttachedDocument
             );
 
         validator.ThrowIfInvalid();
-        return new AttachedDocument(string.Empty, size, extension, type);
+        return new AttachedDocument(name, size, extension, type);
     }
 }

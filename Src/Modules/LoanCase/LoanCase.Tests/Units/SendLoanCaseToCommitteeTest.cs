@@ -22,7 +22,7 @@ public class SendLoanCaseToCommitteeTest
         await BuildSut();
         SendLoanCaseToCommitteeCommand command = new(_loanCaseId);
         SendLoanCaseToCommitteeResponse result =
-            await new SendLoanCaseToCommitteeHandler(_loanRepository).HandlAsync(command,
+            await new SendLoanCaseToCommitteeHandler(_loanRepository).HandleAsync(command,
                 CancellationToken.None);
 
         Assert.True(result.IsSendToCommittee, result.Message);
@@ -34,6 +34,22 @@ public class SendLoanCaseToCommitteeTest
 
         Assert.Equal(LoanCaseStatus.CommitteeReview, loanCase.Status);
     }
+
+    [Fact]
+    public async Task SendToCommittee_Fails_When_LoanCase_State_Is_Not_UnderReview()
+    {
+        Domain.LoanCase loanCase = new LoanCaseSut().WithLoanCaseId(_loanCaseId).Build();
+        await _loanRepository.AddAsync(loanCase);
+
+        SendLoanCaseToCommitteeCommand command = new(_loanCaseId);
+        SendLoanCaseToCommitteeResponse result =
+            await new SendLoanCaseToCommitteeHandler(_loanRepository).HandleAsync(command,
+                CancellationToken.None);
+
+        Assert.False(result.IsSendToCommittee, result.Message);
+        Assert.Equal(LoanCaseStatus.Draft, loanCase.Status);
+    }
+
 
 
     private async Task BuildSut()

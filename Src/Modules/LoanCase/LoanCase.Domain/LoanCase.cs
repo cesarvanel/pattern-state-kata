@@ -8,8 +8,8 @@ namespace LoanCase.Domain;
 
 public class LoanCase
 {
-    private readonly List<AttachedDocument> _attachedDocuments = [];
-    private LoanCaseState _state;
+    private readonly List<AttachedDocument> _attachedDocuments;
+    private LoanCaseState _state = null!;
 
     private LoanCase(Guid id,
         Guid borrowerId,
@@ -23,7 +23,7 @@ public class LoanCase
         Number = number;
         CreatedAt = createdAt;
         Amount = amount;
-        _attachedDocuments = attachedDocuments;
+        _attachedDocuments = [.. attachedDocuments];
     }
 
     public LoanCaseStatus Status => _state.Status;
@@ -33,7 +33,7 @@ public class LoanCase
     public string Number { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public Amount Amount { get; private set; }
-    public RejectionDetails? RejectionDetails { get; private set; }
+    public RejectionDetails? RejectionDetails { get; internal set; }
 
     public IReadOnlyCollection<AttachedDocument> AttachedDocuments =>
         _attachedDocuments.AsReadOnly();
@@ -70,7 +70,29 @@ public class LoanCase
             new Amount(amount),
             attachedDocuments);
 
-        loanCase.TransitionTo(new DraftState());
+        loanCase.TransitionTo(new DraftState(loanCase));
+
+        return loanCase;
+    }
+
+    public static LoanCase Rehydrate(Guid id,
+        Guid borrowerId,
+        string number,
+        DateTime createdAt,
+        Amount amount,
+        List<AttachedDocument> attachedDocuments,
+        LoanCaseStatus status,
+        RejectionDetails? rejectionDetails = null)
+    {
+        LoanCase loanCase = new(id,
+            borrowerId,
+            number,
+            createdAt,
+            amount,
+            attachedDocuments);
+
+        loanCase._state = LoanCaseStateFactory.FromStatus(loanCase, status);
+        loanCase.RejectionDetails = rejectionDetails;
 
         return loanCase;
     }
@@ -82,8 +104,7 @@ public class LoanCase
 
     public void Reject(RejectionDetails rejectionDetails)
     {
-        _state.Reject();
-        RejectionDetails = rejectionDetails;
+        _state.Reject(rejectionDetails);
     }
 
     public void SendToCommittee()
@@ -96,10 +117,13 @@ public class LoanCase
         _state.Approve();
     }
 
+    public void Close()
+    {
+        _state.Close();
+    }
 
     internal void TransitionTo(LoanCaseState nextState)
     {
         _state = nextState;
-        _state.SetLoanCase(this);
     }
 }

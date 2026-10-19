@@ -40,6 +40,24 @@ public class RejectLoanCaseTest
         Assert.NotNull(loanCase.RejectionDetails);
     }
 
+    [Fact]
+    public async Task Reject_Fails_When_LoanCase_State_Is_Not_UnderReview()
+    {
+        Domain.LoanCase loanCase = new LoanCaseSut().WithLoanCaseId(_loanCaseId).Build();
+        await _loanRepository.AddAsync(loanCase);
+
+        RejectLoanCaseCommand command = new(_loanCaseId,
+            "Document non conforme",
+            DocumentFile.Create("Documents/rejected", 150, ".pdf"));
+        RejectLoanCaseResponse response =
+            await new RejectLoanCaseHandler(_loanRepository).HandleAsync(command,
+                CancellationToken.None);
+
+        Assert.False(response.IsRejected, response.Message);
+        Assert.Equal(LoanCaseStatus.Draft, loanCase.Status);
+        Assert.Null(loanCase.RejectionDetails);
+    }
+
     private async Task BuildSut()
     {
         Domain.LoanCase loanCase = new LoanCaseSut().WithLoanCaseId(_loanCaseId)
