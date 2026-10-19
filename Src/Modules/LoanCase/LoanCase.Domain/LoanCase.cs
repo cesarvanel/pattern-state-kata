@@ -16,6 +16,7 @@ public class LoanCase
         string number,
         DateTime createdAt,
         Amount amount,
+        RejectionDetails? rejectionDetails,
         List<AttachedDocument> attachedDocuments)
     {
         Id = id;
@@ -23,6 +24,7 @@ public class LoanCase
         Number = number;
         CreatedAt = createdAt;
         Amount = amount;
+        RejectionDetails = rejectionDetails;
         _attachedDocuments = [.. attachedDocuments];
     }
 
@@ -68,6 +70,7 @@ public class LoanCase
             number,
             createdAt,
             new Amount(amount),
+            null,
             attachedDocuments);
 
         loanCase.TransitionTo(new DraftState(loanCase));
@@ -89,10 +92,10 @@ public class LoanCase
             number,
             createdAt,
             amount,
+            rejectionDetails,
             attachedDocuments);
 
         loanCase._state = LoanCaseStateFactory.FromStatus(loanCase, status);
-        loanCase.RejectionDetails = rejectionDetails;
 
         return loanCase;
     }
