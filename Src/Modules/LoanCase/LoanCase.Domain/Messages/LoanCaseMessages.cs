@@ -9,6 +9,9 @@ public static class LoanCaseMessages
     public const string LoanCaseNotFound = "Ce dossier n'existe pas ";
     public const string UnknownLoanCaseStatus = "Statut du dossier de prêt inconnu";
 
+    public const string LoanCaseIdMismatch =
+        "L'identifiant du dossier de prêt fourni ne correspond pas à l'identifiant attendu.";
+
     public static string ActionNotAllowedInState(string action, LoanCaseStatus status)
     {
         return $"L'action '{action}' n'est pas autorisée dans l'état '{status}'.";

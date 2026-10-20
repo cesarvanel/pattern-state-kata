@@ -1,4 +1,5 @@
-﻿using LoanCase.Domain.Exceptions;
+﻿using LoanCase.Application.Services;
+using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Port.Out;
 using LoanCase.Domain.Services;
 
@@ -8,9 +9,11 @@ namespace LoanCase.Application.Command.Create;
 
 public class CreateLoanCaseHandler(
     ILoanCaseRepository loanCaseRepository,
-    IGenerateLoanCaseNumberService generateLoanCaseNumberService)
+    IGenerateLoanCaseNumberService generateLoanCaseNumberService,
+    ILoanCaseSnapshotRepository snapshotRepository)
 {
-    public async Task<CreateLoanCaseResponse> HandleAsync(CreateLoanCaseCommand command)
+    public async Task<CreateLoanCaseResponse> HandleAsync(CreateLoanCaseCommand command,
+        CancellationToken ct = default)
     {
         CreateLoanCaseResponse response = new();
         Domain.LoanCase loanCase;
@@ -18,7 +21,7 @@ public class CreateLoanCaseHandler(
         try
         {
             string loanCaseNumber = await generateLoanCaseNumberService.ExecuteAsync();
-            bool isAlreadyInUse = await loanCaseRepository.ExistsByNumberAsync(loanCaseNumber);
+            bool isAlreadyInUse = await loanCaseRepository.ExistsByNumberAsync(loanCaseNumber, ct);
 
             if (isAlreadyInUse)
             {
@@ -38,7 +41,9 @@ public class CreateLoanCaseHandler(
             return response;
         }
 
-        await loanCaseRepository.AddAsync(loanCase);
+        await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
+        await loanCaseRepository.AddAsync(loanCase, ct);
+
         response.IsCreated = true;
 
         return await Task.FromResult(response);

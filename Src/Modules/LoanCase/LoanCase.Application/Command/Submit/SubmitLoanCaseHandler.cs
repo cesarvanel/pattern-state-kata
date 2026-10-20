@@ -1,11 +1,14 @@
-﻿using LoanCase.Domain.Exceptions;
+﻿using LoanCase.Application.Services;
+using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Port.Out;
 
 using Shared.Domain.Exceptions;
 
 namespace LoanCase.Application.Command.Submit;
 
-public sealed class SubmitLoanCaseHandler(ILoanCaseRepository loanCaseRepository)
+public sealed class SubmitLoanCaseHandler(
+    ILoanCaseRepository loanCaseRepository,
+    ILoanCaseSnapshotRepository snapshotRepository)
 {
     public async Task<SubmitLoanCaseResponse> HandleAsync(SubmitLoanCaseCommand command,
         CancellationToken ct = default)
@@ -26,9 +29,10 @@ public sealed class SubmitLoanCaseHandler(ILoanCaseRepository loanCaseRepository
             return response;
         }
 
+        await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
         await loanCaseRepository.UpdateAsync(loanCase, ct);
-        response.IsSubmitted = true;
 
+        response.IsSubmitted = true;
 
         return response;
     }

@@ -1,5 +1,6 @@
 ﻿using LoanCase.Application.Command.Create;
 using LoanCase.Domain.Enum;
+using LoanCase.Domain.Snapshot;
 using LoanCase.Domain.Vo;
 using LoanCase.Tests.Builder;
 using LoanCase.Tests.Repository;
@@ -12,12 +13,16 @@ public class CreateLoanCaseTest
     private readonly InMemoryGenerateLoanCaseNumberService _generateLoanCaseNumberService;
     private readonly CreateLoanCaseHandler _handler;
     private readonly InMemoryLoanRepository _loanCaseRepository;
+    private readonly InMemoryLoanCaseSnapshotRepository _loanCaseSnapshotRepository;
 
     public CreateLoanCaseTest()
     {
         _loanCaseRepository = new InMemoryLoanRepository();
         _generateLoanCaseNumberService = new InMemoryGenerateLoanCaseNumberService(null);
-        _handler = new CreateLoanCaseHandler(_loanCaseRepository, _generateLoanCaseNumberService);
+        _loanCaseSnapshotRepository = new InMemoryLoanCaseSnapshotRepository();
+        _handler = new CreateLoanCaseHandler(_loanCaseRepository,
+            _generateLoanCaseNumberService,
+            _loanCaseSnapshotRepository);
     }
 
     [Fact]
@@ -26,7 +31,7 @@ public class CreateLoanCaseTest
         CreateLoanCaseCommand command = new CreateLoanCaseCommandBuilder()
             .WithDocuments(GenerateAllTypes()).Build();
         CreateLoanCaseResponse result =
-            await _handler.HandleAsync(command);
+            await _handler.HandleAsync(command, _ct);
 
         Assert.True(result.IsCreated, result.Message);
         Domain.LoanCase loanCase = Assert.Single(_loanCaseRepository.LoanCases.Values);
@@ -35,6 +40,9 @@ public class CreateLoanCaseTest
         Assert.Equal(command.Amount, loanCase.Amount.Value);
         Assert.Equal(command.Id, loanCase.Id);
         Assert.Equal(LoanCaseStatus.Draft, loanCase.Status);
+        LoanCaseStateSnapshot loanCaseSnapshot =
+            Assert.Single(_loanCaseSnapshotRepository.StateSnapshots);
+        Assert.Equal(1, loanCaseSnapshot.Version);
     }
 
     [Fact]
@@ -42,10 +50,11 @@ public class CreateLoanCaseTest
     {
         CreateLoanCaseCommand command = new CreateLoanCaseCommandBuilder().Build();
         CreateLoanCaseResponse result =
-            await _handler.HandleAsync(command);
+            await _handler.HandleAsync(command, _ct);
 
         Assert.False(result.IsCreated, result.Message);
         Assert.Empty(_loanCaseRepository.LoanCases.Values);
+        Assert.Empty(_loanCaseSnapshotRepository.StateSnapshots);
     }
 
     [Fact]
@@ -55,7 +64,7 @@ public class CreateLoanCaseTest
             new CreateLoanCaseCommandBuilder().WithDocuments([.. GenerateAllTypes().Take(2)])
                 .Build();
         CreateLoanCaseResponse result =
-            await _handler.HandleAsync(command);
+            await _handler.HandleAsync(command, _ct);
 
         Assert.False(result.IsCreated, result.Message);
         Assert.Empty(_loanCaseRepository.LoanCases.Values);
@@ -69,7 +78,7 @@ public class CreateLoanCaseTest
             .WithDocuments(GenerateAllTypes())
             .Build();
 
-        CreateLoanCaseResponse result = await _handler.HandleAsync(command);
+        CreateLoanCaseResponse result = await _handler.HandleAsync(command, _ct);
 
         Assert.False(result.IsCreated, result.Message);
     }

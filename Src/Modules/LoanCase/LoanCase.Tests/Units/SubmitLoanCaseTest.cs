@@ -1,5 +1,6 @@
 ﻿using LoanCase.Application.Command.Submit;
 using LoanCase.Domain.Enum;
+using LoanCase.Domain.Snapshot;
 using LoanCase.Tests.Builder;
 using LoanCase.Tests.Repository;
 
@@ -10,11 +11,15 @@ public class SubmitLoanCaseTest
     private readonly SubmitLoanCaseHandler _handler;
     private readonly Guid _loanCaseId = Guid.NewGuid();
     private readonly InMemoryLoanRepository _loanRepository;
+    private readonly Guid _snapshotId = Guid.NewGuid();
+    private readonly InMemoryLoanCaseSnapshotRepository _snapshotRepository;
 
     public SubmitLoanCaseTest()
     {
         _loanRepository = new InMemoryLoanRepository();
-        _handler = new SubmitLoanCaseHandler(_loanRepository);
+        _snapshotRepository = new InMemoryLoanCaseSnapshotRepository();
+        _handler =
+            new SubmitLoanCaseHandler(_loanRepository, _snapshotRepository);
     }
 
 
@@ -32,6 +37,19 @@ public class SubmitLoanCaseTest
         Domain.LoanCase loanCase = Assert.Single(_loanRepository.LoanCases.Values);
 
         Assert.Equal(LoanCaseStatus.UnderReview, loanCase.Status);
+
+        Assert.NotEmpty(_snapshotRepository.StateSnapshots);
+
+        LoanCaseStateSnapshot? existedSnapshot =
+            _snapshotRepository.StateSnapshots.Last();
+
+        Assert.NotNull(existedSnapshot);
+
+        Assert.Equal(loanCase.Id, existedSnapshot.LoanCaseId);
+
+        Assert.Equal(2, existedSnapshot.Version);
+        Assert.Equal(2, loanCase.Version);
+        Assert.Equal(LoanCaseStatus.UnderReview, existedSnapshot.Status);
     }
 
     [Fact]
@@ -51,6 +69,8 @@ public class SubmitLoanCaseTest
         Domain.LoanCase loanCase = new LoanCaseSut().WithLoanCaseId(_loanCaseId).Build();
 
         await _loanRepository.AddAsync(loanCase);
+        LoanCaseStateSnapshot snapshot = loanCase.SaveState(_snapshotId, DateTime.UtcNow);
+        await _snapshotRepository.AddAsync(snapshot, CancellationToken.None);
     }
 
     private async Task BuildSutWithUnderReview()

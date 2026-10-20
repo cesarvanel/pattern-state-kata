@@ -2,6 +2,7 @@
 using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Factory;
 using LoanCase.Domain.Messages;
+using LoanCase.Domain.Snapshot;
 using LoanCase.Domain.States;
 using LoanCase.Domain.Vo;
 
@@ -18,6 +19,7 @@ public class LoanCase
         DateTime createdAt,
         Amount amount,
         RejectionDetails? rejectionDetails,
+        int version,
         List<AttachedDocument> attachedDocuments)
     {
         Id = id;
@@ -27,16 +29,20 @@ public class LoanCase
         Amount = amount;
         RejectionDetails = rejectionDetails;
         _attachedDocuments = [.. attachedDocuments];
+        Version = version;
     }
 
     public LoanCaseStatus Status => _state.Status;
 
-    public Guid Id { get; private set; }
+    public int Version { get; private set; }
+
+    public Guid Id { get; }
     public Guid BorrowerId { get; private set; }
     public string Number { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public Amount Amount { get; private set; }
     public RejectionDetails? RejectionDetails { get; internal set; }
+
 
     public IReadOnlyCollection<AttachedDocument> AttachedDocuments =>
         _attachedDocuments.AsReadOnly();
@@ -72,6 +78,7 @@ public class LoanCase
             createdAt,
             new Amount(amount),
             null,
+            0,
             attachedDocuments);
 
         loanCase.TransitionTo(new DraftState(loanCase));
@@ -86,7 +93,8 @@ public class LoanCase
         Amount amount,
         List<AttachedDocument> attachedDocuments,
         LoanCaseStatus status,
-        RejectionDetails? rejectionDetails)
+        RejectionDetails? rejectionDetails,
+        int version = 0)
     {
         LoanCase loanCase = new(id,
             borrowerId,
@@ -94,6 +102,7 @@ public class LoanCase
             createdAt,
             amount,
             rejectionDetails,
+            version,
             attachedDocuments);
 
         loanCase._state = LoanCaseStateFactory.FromStatus(loanCase, status);
@@ -129,5 +138,52 @@ public class LoanCase
     internal void TransitionTo(LoanCaseState nextState)
     {
         _state = nextState;
+    }
+
+    public LoanCaseStateSnapshot SaveState(
+        Guid id,
+        DateTime dateTime,
+        Guid? createdBy = null,
+        Guid? rolledBackFrom = null)
+    {
+        int version = ++Version;
+        return new LoanCaseStateSnapshot(
+            id,
+            Id,
+            BorrowerId,
+            Status,
+            Number,
+            Amount.Value,
+            CreatedAt,
+            dateTime,
+            createdBy,
+            version,
+            rolledBackFrom,
+            [.. _attachedDocuments],
+            RejectionDetails);
+    }
+
+    public void Restore(LoanCaseStateSnapshot snapshot)
+    {
+        if (Id != snapshot.LoanCaseId)
+        {
+            throw new InvalidLoanCaseSnapshotException(LoanCaseMessages.LoanCaseIdMismatch);
+        }
+
+        if (Status == LoanCaseStatus.Closed)
+        {
+            throw new InvalidLoanCaseStateActionException(
+                LoanCaseMessages.ActionNotAllowedInState(nameof(Restore), Status));
+        }
+
+        BorrowerId = snapshot.BorrowerId;
+        Number = snapshot.Number;
+        Amount = new Amount(snapshot.Amount);
+        CreatedAt = snapshot.CreatedAt;
+        RejectionDetails = snapshot.RejectionDetails;
+        _attachedDocuments.Clear();
+        _attachedDocuments.AddRange(snapshot.AttachedDocuments);
+        _state = LoanCaseStateFactory.FromStatus(this, snapshot.Status);
+        Version = Math.Max(Version, snapshot.Version);
     }
 }
