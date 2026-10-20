@@ -2,6 +2,7 @@
 using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Port.Out;
 
+using Shared.Application.Command;
 using Shared.Domain.Exceptions;
 
 namespace LoanCase.Application.Command.SendToCommittee;
@@ -9,6 +10,7 @@ namespace LoanCase.Application.Command.SendToCommittee;
 public sealed class SendLoanCaseToCommitteeHandler(
     ILoanCaseRepository loanCaseRepository,
     ILoanCaseSnapshotRepository snapshotRepository)
+    : ICommandHandler<SendLoanCaseToCommitteeCommand, SendLoanCaseToCommitteeResponse>
 {
     public async Task<SendLoanCaseToCommitteeResponse> HandleAsync(
         SendLoanCaseToCommitteeCommand command,

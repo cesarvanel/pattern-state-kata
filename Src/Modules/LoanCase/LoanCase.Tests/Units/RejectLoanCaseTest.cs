@@ -1,4 +1,4 @@
-﻿using LoanCase.Application.Command.reject;
+using LoanCase.Application.Command.Reject;
 using LoanCase.Domain.Enum;
 using LoanCase.Domain.Snapshot;
 using LoanCase.Domain.Vo;

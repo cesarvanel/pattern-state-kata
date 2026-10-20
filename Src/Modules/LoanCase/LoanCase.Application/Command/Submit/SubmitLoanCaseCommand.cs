@@ -1,3 +1,6 @@
-﻿namespace LoanCase.Application.Command.Submit;
+﻿using Shared.Application.Command;
 
-public record SubmitLoanCaseCommand(Guid LoanCaseId);
+namespace LoanCase.Application.Command.Submit;
+
+public record SubmitLoanCaseCommand(Guid LoanCaseId)
+    : ICommand<SubmitLoanCaseResponse>;

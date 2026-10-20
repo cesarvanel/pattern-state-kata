@@ -1,7 +1,7 @@
 using LoanCase.Application.Command.Approve;
 using LoanCase.Application.Command.Close;
 using LoanCase.Application.Command.Create;
-using LoanCase.Application.Command.reject;
+using LoanCase.Application.Command.Reject;
 using LoanCase.Application.Command.SendToCommittee;
 using LoanCase.Application.Command.Submit;
 using LoanCase.Domain.Enum;
@@ -113,7 +113,7 @@ public class LoanCaseLifecycleTest
     private async Task ApproveAsync()
     {
         ApproveLoanCaseResponse response =
-            await _approveHandler.HandleAsync(new ApprovedLoanCaseCommand(_loanCaseId));
+            await _approveHandler.HandleAsync(new ApproveLoanCaseCommand(_loanCaseId));
 
         Assert.True(response.IsApproved, response.Message);
     }

@@ -1,3 +1,6 @@
-﻿namespace LoanCase.Application.Command.Restore;
+﻿using Shared.Application.Command;
 
-public record RestoreLoanCaseStateCommand(Guid LoanCaseId, Guid CreatedBy, int Version);
+namespace LoanCase.Application.Command.Restore;
+
+public record RestoreLoanCaseStateCommand(Guid LoanCaseId, Guid CreatedBy, int Version)
+    : ICommand<RestoreLoanCaseStateResponse>;

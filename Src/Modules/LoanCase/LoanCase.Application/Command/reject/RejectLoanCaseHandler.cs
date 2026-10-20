@@ -3,13 +3,15 @@ using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Port.Out;
 using LoanCase.Domain.Vo;
 
+using Shared.Application.Command;
 using Shared.Domain.Exceptions;
 
-namespace LoanCase.Application.Command.reject;
+namespace LoanCase.Application.Command.Reject;
 
 public class RejectLoanCaseHandler(
     ILoanCaseRepository loanCaseRepository,
     ILoanCaseSnapshotRepository snapshotRepository)
+    : ICommandHandler<RejectLoanCaseCommand, RejectLoanCaseResponse>
 {
     public async Task<RejectLoanCaseResponse> HandleAsync(RejectLoanCaseCommand command,
         CancellationToken ct = default)

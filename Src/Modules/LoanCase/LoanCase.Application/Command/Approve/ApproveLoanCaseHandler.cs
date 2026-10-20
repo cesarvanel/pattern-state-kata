@@ -2,6 +2,7 @@
 using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Port.Out;
 
+using Shared.Application.Command;
 using Shared.Domain.Exceptions;
 
 namespace LoanCase.Application.Command.Approve;
@@ -9,8 +10,9 @@ namespace LoanCase.Application.Command.Approve;
 public sealed class ApproveLoanCaseHandler(
     ILoanCaseRepository loanCaseRepository,
     ILoanCaseSnapshotRepository snapshotRepository)
+    : ICommandHandler<ApproveLoanCaseCommand, ApproveLoanCaseResponse>
 {
-    public async Task<ApproveLoanCaseResponse> HandleAsync(ApprovedLoanCaseCommand command,
+    public async Task<ApproveLoanCaseResponse> HandleAsync(ApproveLoanCaseCommand command,
         CancellationToken ct = default)
     {
         ApproveLoanCaseResponse response = new();

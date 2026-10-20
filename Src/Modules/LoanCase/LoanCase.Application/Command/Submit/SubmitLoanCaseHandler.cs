@@ -2,6 +2,7 @@
 using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Port.Out;
 
+using Shared.Application.Command;
 using Shared.Domain.Exceptions;
 
 namespace LoanCase.Application.Command.Submit;
@@ -9,6 +10,7 @@ namespace LoanCase.Application.Command.Submit;
 public sealed class SubmitLoanCaseHandler(
     ILoanCaseRepository loanCaseRepository,
     ILoanCaseSnapshotRepository snapshotRepository)
+    : ICommandHandler<SubmitLoanCaseCommand, SubmitLoanCaseResponse>
 {
     public async Task<SubmitLoanCaseResponse> HandleAsync(SubmitLoanCaseCommand command,
         CancellationToken ct = default)

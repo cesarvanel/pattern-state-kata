@@ -3,6 +3,7 @@ using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Port.Out;
 using LoanCase.Domain.Snapshot;
 
+using Shared.Application.Command;
 using Shared.Domain.Exceptions;
 
 namespace LoanCase.Application.Command.Restore;
@@ -10,6 +11,7 @@ namespace LoanCase.Application.Command.Restore;
 public class RestoreLoanCaseStateHandler(
     ILoanCaseRepository loanCaseRepository,
     ILoanCaseSnapshotRepository loanCaseSnapshotRepository)
+    : ICommandHandler<RestoreLoanCaseStateCommand, RestoreLoanCaseStateResponse>
 {
     public async Task<RestoreLoanCaseStateResponse> HandleAsync(RestoreLoanCaseStateCommand command,
         CancellationToken ct = default)

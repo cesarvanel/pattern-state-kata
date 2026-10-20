@@ -1,8 +1,9 @@
-﻿using Shared.Domain.Vo;
+﻿using Shared.Application.Command;
+using Shared.Domain.Vo;
 
-namespace LoanCase.Application.Command.reject;
+namespace LoanCase.Application.Command.Reject;
 
 public record RejectLoanCaseCommand(
     Guid LoanCaseId,
     string RejectReason,
-    DocumentFile RejectDocument);
+    DocumentFile RejectDocument) : ICommand<RejectLoanCaseResponse>;

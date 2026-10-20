@@ -1,3 +1,6 @@
-﻿namespace LoanCase.Application.Command.Close;
+﻿using Shared.Application.Command;
 
-public record CloseLoanCaseCommand(Guid LoanCaseId);
+namespace LoanCase.Application.Command.Close;
+
+public record CloseLoanCaseCommand(Guid LoanCaseId)
+    : ICommand<CloseLoanCaseResponse>;

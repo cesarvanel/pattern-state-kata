@@ -2,6 +2,7 @@
 using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Port.Out;
 
+using Shared.Application.Command;
 using Shared.Domain.Exceptions;
 
 namespace LoanCase.Application.Command.Close;
@@ -9,6 +10,7 @@ namespace LoanCase.Application.Command.Close;
 public sealed class CloseLoanCaseHandler(
     ILoanCaseRepository loanCaseRepository,
     ILoanCaseSnapshotRepository snapshotRepository)
+    : ICommandHandler<CloseLoanCaseCommand, CloseLoanCaseResponse>
 {
     public async Task<CloseLoanCaseResponse> HandleAsync(CloseLoanCaseCommand command,
         CancellationToken ct = default)

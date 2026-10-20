@@ -1,4 +1,4 @@
-﻿using LoanCase.Application.Command.Approve;
+using LoanCase.Application.Command.Approve;
 using LoanCase.Domain.Enum;
 using LoanCase.Domain.Snapshot;
 using LoanCase.Tests.Builder;
@@ -27,7 +27,7 @@ public class ApproveLoanCaseTest
     {
         await _given.AtStatusAsync(_loanCaseId, LoanCaseStatus.CommitteeReview);
 
-        ApprovedLoanCaseCommand command = new(_loanCaseId);
+        ApproveLoanCaseCommand command = new(_loanCaseId);
         ApproveLoanCaseResponse result = await _handler.HandleAsync(command);
 
         Assert.True(result.IsApproved, result.Message);
@@ -58,7 +58,7 @@ public class ApproveLoanCaseTest
     {
         await _given.AtStatusAsync(_loanCaseId, status);
 
-        ApprovedLoanCaseCommand command = new(_loanCaseId);
+        ApproveLoanCaseCommand command = new(_loanCaseId);
         ApproveLoanCaseResponse result = await _handler.HandleAsync(command);
 
         Assert.False(result.IsApproved, result.Message);

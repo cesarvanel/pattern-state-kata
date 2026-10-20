@@ -1,4 +1,4 @@
-﻿namespace LoanCase.Application.Command.reject;
+﻿namespace LoanCase.Application.Command.Reject;
 
 public class RejectLoanCaseResponse
 {

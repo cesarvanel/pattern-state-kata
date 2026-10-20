@@ -3,6 +3,7 @@ using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Port.Out;
 using LoanCase.Domain.Services;
 
+using Shared.Application.Command;
 using Shared.Domain.Exceptions;
 
 namespace LoanCase.Application.Command.Create;
@@ -11,6 +12,7 @@ public class CreateLoanCaseHandler(
     ILoanCaseRepository loanCaseRepository,
     IGenerateLoanCaseNumberService generateLoanCaseNumberService,
     ILoanCaseSnapshotRepository snapshotRepository)
+    : ICommandHandler<CreateLoanCaseCommand, CreateLoanCaseResponse>
 {
     public async Task<CreateLoanCaseResponse> HandleAsync(CreateLoanCaseCommand command,
         CancellationToken ct = default)

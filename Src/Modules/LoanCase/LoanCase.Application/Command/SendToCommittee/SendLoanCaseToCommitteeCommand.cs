@@ -1,3 +1,6 @@
-﻿namespace LoanCase.Application.Command.SendToCommittee;
+﻿using Shared.Application.Command;
 
-public record SendLoanCaseToCommitteeCommand(Guid LoanCaseId);
+namespace LoanCase.Application.Command.SendToCommittee;
+
+public record SendLoanCaseToCommitteeCommand(Guid LoanCaseId)
+    : ICommand<SendLoanCaseToCommitteeResponse>;
