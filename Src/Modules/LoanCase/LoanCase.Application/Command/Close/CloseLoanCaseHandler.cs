@@ -1,11 +1,14 @@
-﻿using LoanCase.Domain.Exceptions;
+﻿using LoanCase.Application.Services;
+using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Port.Out;
 
 using Shared.Domain.Exceptions;
 
 namespace LoanCase.Application.Command.Close;
 
-public sealed class CloseLoanCaseHandler(ILoanCaseRepository loanCaseRepository)
+public sealed class CloseLoanCaseHandler(
+    ILoanCaseRepository loanCaseRepository,
+    ILoanCaseSnapshotRepository snapshotRepository)
 {
     public async Task<CloseLoanCaseResponse> HandleAsync(CloseLoanCaseCommand command,
         CancellationToken ct = default)
@@ -26,8 +29,10 @@ public sealed class CloseLoanCaseHandler(ILoanCaseRepository loanCaseRepository)
             return response;
         }
 
+        await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
         await loanCaseRepository.UpdateAsync(loanCase, ct);
         response.IsClosed = true;
+
         return response;
     }
 }

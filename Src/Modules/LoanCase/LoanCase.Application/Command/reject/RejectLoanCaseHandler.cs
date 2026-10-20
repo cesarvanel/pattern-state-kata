@@ -1,4 +1,5 @@
-﻿using LoanCase.Domain.Exceptions;
+﻿using LoanCase.Application.Services;
+using LoanCase.Domain.Exceptions;
 using LoanCase.Domain.Port.Out;
 using LoanCase.Domain.Vo;
 
@@ -6,7 +7,9 @@ using Shared.Domain.Exceptions;
 
 namespace LoanCase.Application.Command.reject;
 
-public class RejectLoanCaseHandler(ILoanCaseRepository loanCaseRepository)
+public class RejectLoanCaseHandler(
+    ILoanCaseRepository loanCaseRepository,
+    ILoanCaseSnapshotRepository snapshotRepository)
 {
     public async Task<RejectLoanCaseResponse> HandleAsync(RejectLoanCaseCommand command,
         CancellationToken ct = default)
@@ -30,8 +33,10 @@ public class RejectLoanCaseHandler(ILoanCaseRepository loanCaseRepository)
             return response;
         }
 
+        await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
         await loanCaseRepository.UpdateAsync(loanCase, ct);
         response.IsRejected = true;
+
         return response;
     }
 }

@@ -1,5 +1,6 @@
 ﻿using LoanCase.Application.Command.Close;
 using LoanCase.Domain.Enum;
+using LoanCase.Domain.Snapshot;
 using LoanCase.Tests.Builder;
 using LoanCase.Tests.Repository;
 
@@ -17,7 +18,7 @@ public class CloseLoanCaseTest
     {
         _loanRepository = new InMemoryLoanRepository();
         _snapshotRepository = new InMemoryLoanCaseSnapshotRepository();
-        _handler = new CloseLoanCaseHandler(_loanRepository);
+        _handler = new CloseLoanCaseHandler(_loanRepository, _snapshotRepository);
         _given = new LoanCaseGiven(_loanRepository, _snapshotRepository);
     }
 
@@ -36,6 +37,14 @@ public class CloseLoanCaseTest
 
         Assert.NotNull(loanCase);
         Assert.Equal(LoanCaseStatus.Closed, loanCase.Status);
+        Assert.Equal(2, loanCase.Version);
+
+        Assert.Equal(2, _snapshotRepository.StateSnapshots.Count);
+
+        LoanCaseStateSnapshot lastSnapshot = _snapshotRepository.StateSnapshots.Last();
+        Assert.Equal(loanCase.Id, lastSnapshot.LoanCaseId);
+        Assert.Equal(LoanCaseStatus.Closed, lastSnapshot.Status);
+        Assert.Equal(2, lastSnapshot.Version);
     }
 
     [Theory]
@@ -49,9 +58,6 @@ public class CloseLoanCaseTest
     {
         await _given.AtStatusAsync(_loanCaseId, status);
 
-        int snapshotCountBefore = _snapshotRepository.StateSnapshots.Count;
-        int versionBefore = await VersionOfLoanCase();
-
         CloseLoanCaseResponse result =
             await _handler.HandleAsync(new CloseLoanCaseCommand(_loanCaseId));
 
@@ -63,16 +69,7 @@ public class CloseLoanCaseTest
 
         Assert.NotNull(loanCase);
         Assert.Equal(status, loanCase.Status);
-        Assert.Equal(versionBefore, loanCase.Version);
-        Assert.Equal(snapshotCountBefore, _snapshotRepository.StateSnapshots.Count);
-    }
-
-    private async Task<int> VersionOfLoanCase()
-    {
-        Domain.LoanCase? loanCase =
-            await _loanRepository.GetByIdAsync(_loanCaseId, CancellationToken.None);
-
-        Assert.NotNull(loanCase);
-        return loanCase.Version;
+        Assert.Equal(1, loanCase.Version);
+        Assert.Single(_snapshotRepository.StateSnapshots);
     }
 }

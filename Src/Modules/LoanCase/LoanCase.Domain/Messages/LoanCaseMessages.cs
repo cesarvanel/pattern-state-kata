@@ -8,6 +8,7 @@ public static class LoanCaseMessages
     public const string EmptyAttachedDocument = "Les documents joints ne peuvent pas être vides";
     public const string LoanCaseNotFound = "Ce dossier n'existe pas ";
     public const string UnknownLoanCaseStatus = "Statut du dossier de prêt inconnu";
+    public const string LoanCaseSnapshotNotFound = "l'etat de ce dossier n'existe pas ";
 
     public const string LoanCaseIdMismatch =
         "L'identifiant du dossier de prêt fourni ne correspond pas à l'identifiant attendu.";

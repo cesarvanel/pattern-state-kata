@@ -8,10 +8,11 @@ public sealed class LoanCaseSnapshotService(ILoanCaseSnapshotRepository snapshot
 {
     public async Task ExecuteAsync(Domain.LoanCase loanCase,
         CancellationToken ct,
-        Guid? createdBy = null)
+        Guid? createdBy = null,
+        Guid? rollbackFrom = null)
     {
         LoanCaseStateSnapshot snapshot =
-            loanCase.SaveState(Guid.NewGuid(), DateTime.UtcNow, createdBy);
+            loanCase.SaveState(Guid.NewGuid(), DateTime.UtcNow, createdBy, rollbackFrom);
 
         await snapshotRepository.AddAsync(snapshot, ct);
     }

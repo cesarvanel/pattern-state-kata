@@ -38,10 +38,12 @@ public class StateTransitionTest
         LoanCaseStatus expected)
     {
         Domain.LoanCase loanCase = Build(from);
+        int versionBefore = loanCase.Version;
 
         Apply(loanCase, action);
 
         Assert.Equal(expected, loanCase.Status);
+        Assert.Equal(versionBefore, loanCase.Version);
 
         if (action == LoanCaseAction.Reject)
         {

@@ -1,5 +1,6 @@
 ﻿using LoanCase.Application.Command.reject;
 using LoanCase.Domain.Enum;
+using LoanCase.Domain.Snapshot;
 using LoanCase.Domain.Vo;
 using LoanCase.Tests.Builder;
 using LoanCase.Tests.Repository;
@@ -22,7 +23,7 @@ public class RejectLoanCaseTest
     {
         _loanRepository = new InMemoryLoanRepository();
         _snapshotRepository = new InMemoryLoanCaseSnapshotRepository();
-        _handler = new RejectLoanCaseHandler(_loanRepository);
+        _handler = new RejectLoanCaseHandler(_loanRepository, _snapshotRepository);
         _given = new LoanCaseGiven(_loanRepository, _snapshotRepository);
     }
 
@@ -44,11 +45,19 @@ public class RejectLoanCaseTest
 
         Assert.NotNull(loanCase);
         Assert.Equal(LoanCaseStatus.Rejected, loanCase.Status);
+        Assert.Equal(2, loanCase.Version);
 
         RejectionDetails? rejectionDetails = loanCase.RejectionDetails;
         Assert.NotNull(rejectionDetails);
         Assert.Equal(RejectReason, rejectionDetails.RejectReason);
         Assert.NotNull(rejectionDetails.DocumentFile);
+
+        Assert.Equal(2, _snapshotRepository.StateSnapshots.Count);
+
+        LoanCaseStateSnapshot lastSnapshot = _snapshotRepository.StateSnapshots.Last();
+        Assert.Equal(loanCase.Id, lastSnapshot.LoanCaseId);
+        Assert.Equal(LoanCaseStatus.Rejected, lastSnapshot.Status);
+        Assert.Equal(2, lastSnapshot.Version);
     }
 
     [Theory]
@@ -61,10 +70,7 @@ public class RejectLoanCaseTest
     {
         await _given.AtStatusAsync(_loanCaseId, status);
 
-        int snapshotCountBefore = _snapshotRepository.StateSnapshots.Count;
-        int versionBefore = await VersionOfLoanCase();
-        RejectionDetails? rejectionDetailsBefore =
-            await RejectionDetailsOfLoanCase();
+        RejectionDetails? rejectionDetailsBefore = await RejectionDetailsOfLoanCase();
 
         RejectLoanCaseResponse response = await _handler.HandleAsync(CreateCommand(),
             CancellationToken.None);
@@ -77,9 +83,9 @@ public class RejectLoanCaseTest
 
         Assert.NotNull(loanCase);
         Assert.Equal(status, loanCase.Status);
-        Assert.Equal(versionBefore, loanCase.Version);
+        Assert.Equal(1, loanCase.Version);
         Assert.Equal(rejectionDetailsBefore, loanCase.RejectionDetails);
-        Assert.Equal(snapshotCountBefore, _snapshotRepository.StateSnapshots.Count);
+        Assert.Single(_snapshotRepository.StateSnapshots);
     }
 
     private RejectLoanCaseCommand CreateCommand()
@@ -87,15 +93,6 @@ public class RejectLoanCaseTest
         return new RejectLoanCaseCommand(_loanCaseId,
             RejectReason,
             DocumentFile.Create("Documents/rejected", 150, ".pdf"));
-    }
-
-    private async Task<int> VersionOfLoanCase()
-    {
-        Domain.LoanCase? loanCase =
-            await _loanRepository.GetByIdAsync(_loanCaseId, CancellationToken.None);
-
-        Assert.NotNull(loanCase);
-        return loanCase.Version;
     }
 
     private async Task<RejectionDetails?> RejectionDetailsOfLoanCase()
