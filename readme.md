@@ -39,6 +39,67 @@ A `LoanCase` goes through a strict life cycle with specific business rules gover
 - **Domain-Driven Design (DDD):** Rich domain models, encapsulation, and immutable Value Objects.
 - **Code Formatting:** Clean, automated styling aligned with Csharpier and `.editorconfig`.
 
+## ⚠️ Known Limitations & Technical Debt
+
+### Missing transaction to guarantee use-case atomicity
+
+Most use cases perform **two separate writes** that must succeed or fail together:
+
+1. appending a new `LoanCaseStateSnapshot` (state history / audit trail);
+2. updating the `LoanCase` aggregate in its repository.
+
+These writes are currently executed sequentially, **outside of any transaction**:
+
+```csharp
+await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
+await loanCaseRepository.UpdateAsync(loanCase, ct);
+```
+
+If the second call fails (database outage, optimistic concurrency conflict, network error, etc.), the snapshot has already been persisted while the aggregate keeps its previous state — or vice versa. The snapshot history no longer reflects the actual loan case, leaving the system **inconsistent**.
+
+The use cases affected are `Create`, `Submit`, `SendToCommittee`, `Approve`, `Reject`, `Close` and `Restore`.
+
+> The in-memory repositories used by the test suite mask this issue, because their writes never fail.
+
+**Planned fix:** introduce a transactional boundary (Unit of Work / `IDbContextTransaction`) so that the snapshot append and the aggregate update are committed atomically. The snapshot stays append-only and versioned — only the persistence boundary changes.
+
+**Acceptance criteria:**
+- [ ] A shared transaction abstraction (e.g. `IUnitOfWork`) usable by every handler.
+- [ ] Snapshot write and aggregate update committed within a single transaction.
+- [ ] A test proving the rollback: if the update fails after the snapshot write, no snapshot remains persisted.
+
+### Missing uniform Command / CommandHandler pattern
+
+The use cases are all shaped like Command → Handler → Response, but the convention is not enforced, so each one drifts:
+
+- inconsistent naming: `ApprovedLoanCaseCommand` (past tense) vs `ApproveLoanCaseHandler` / `ApproveLoanCaseResponse`;
+- inconsistent folders: `Command/reject` (lowercase) vs `Command/Approve`, `Command/Close`, etc.;
+- inconsistent signatures: some handlers accept a `CancellationToken`, others do not (`HandleAsync(command)` vs `HandleAsync(command, ct)`);
+- no shared abstraction, so every handler is wired and called manually (no common pipeline for validation, logging, metrics, transactions, etc.).
+
+**Planned fix:** introduce the Command / CommandHandler pattern as a single, explicit contract shared by every use case:
+
+```csharp
+public interface ICommand<TResponse>;
+
+public interface ICommandHandler<in TCommand, TResponse>
+    where TCommand : ICommand<TResponse>
+{
+    Task<TResponse> HandleAsync(TCommand command, CancellationToken ct = default);
+}
+```
+
+- one Command + one Handler per use case, both implementing the interfaces;
+- uniform naming: `ApproveLoanCaseCommand`, `ApproveLoanCaseHandler`, `ApproveLoanCaseResponse` (verb-first, no past tense);
+- PascalCase folders matching the use case (`Reject` instead of `reject`);
+- handlers registered in DI and resolved through a dispatcher/mediator, so cross-cutting concerns (including the transaction above) can be applied as a common pipeline instead of being repeated in each handler.
+
+**Acceptance criteria:**
+- [ ] Shared `ICommand<TResponse>` and `ICommandHandler<TCommand, TResponse>` abstractions.
+- [ ] Every use case implements the interfaces with a consistent `HandleAsync(TCommand, CancellationToken)` signature.
+- [ ] Consistent naming for commands, handlers, responses and folders.
+- [ ] Cross-cutting concerns applied through a common pipeline rather than per handler.
+
 ---
 
 ## 📖 Command Cheat Sheet & Explanations
