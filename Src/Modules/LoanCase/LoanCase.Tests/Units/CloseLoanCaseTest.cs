@@ -7,48 +7,72 @@ namespace LoanCase.Tests.Units;
 
 public class CloseLoanCaseTest
 {
+    private readonly LoanCaseGiven _given;
+    private readonly CloseLoanCaseHandler _handler;
     private readonly Guid _loanCaseId = Guid.NewGuid();
-
     private readonly InMemoryLoanRepository _loanRepository;
+    private readonly InMemoryLoanCaseSnapshotRepository _snapshotRepository;
 
     public CloseLoanCaseTest()
     {
         _loanRepository = new InMemoryLoanRepository();
+        _snapshotRepository = new InMemoryLoanCaseSnapshotRepository();
+        _handler = new CloseLoanCaseHandler(_loanRepository);
+        _given = new LoanCaseGiven(_loanRepository, _snapshotRepository);
     }
 
     [Fact]
-    public async Task Close_Loan_Case_Should_Transit_State_From_Approved_To_Closed()
+    public async Task Close_When_Approved_Should_Transition_To_Closed()
     {
-        await BuildSut(LoanCaseStatus.Approved);
-        CloseLoanCaseResponse result =
-            await new CloseLoanCaseHandler(_loanRepository).HandleAsync(
-                new CloseLoanCaseCommand(_loanCaseId));
+        await _given.AtStatusAsync(_loanCaseId, LoanCaseStatus.Approved);
 
-        Assert.True(result.IsClosed);
-        Domain.LoanCase loanCase = Assert.Single(_loanRepository.LoanCases.Values);
+        CloseLoanCaseResponse result =
+            await _handler.HandleAsync(new CloseLoanCaseCommand(_loanCaseId));
+
+        Assert.True(result.IsClosed, result.Message);
+
+        Domain.LoanCase? loanCase =
+            await _loanRepository.GetByIdAsync(_loanCaseId, CancellationToken.None);
+
+        Assert.NotNull(loanCase);
         Assert.Equal(LoanCaseStatus.Closed, loanCase.Status);
     }
 
-    [Fact]
-    public async Task Close_Loan_Case_Should_Fails_When_State_Is_Not_Approved()
+    [Theory]
+    [InlineData(LoanCaseStatus.Draft)]
+    [InlineData(LoanCaseStatus.UnderReview)]
+    [InlineData(LoanCaseStatus.CommitteeReview)]
+    [InlineData(LoanCaseStatus.Rejected)]
+    [InlineData(LoanCaseStatus.Closed)]
+    public async Task Close_Fails_When_LoanCase_State_Is_Not_Approved(
+        LoanCaseStatus status)
     {
-        await BuildSut(LoanCaseStatus.CommitteeReview);
+        await _given.AtStatusAsync(_loanCaseId, status);
+
+        int snapshotCountBefore = _snapshotRepository.StateSnapshots.Count;
+        int versionBefore = await VersionOfLoanCase();
 
         CloseLoanCaseResponse result =
-            await new CloseLoanCaseHandler(_loanRepository).HandleAsync(
-                new CloseLoanCaseCommand(_loanCaseId));
+            await _handler.HandleAsync(new CloseLoanCaseCommand(_loanCaseId));
 
-        Assert.False(result.IsClosed);
-        Domain.LoanCase loanCase = Assert.Single(_loanRepository.LoanCases.Values);
-        Assert.NotEqual(LoanCaseStatus.Closed, loanCase.Status);
+        Assert.False(result.IsClosed, result.Message);
+        Assert.NotEmpty(result.Message);
+
+        Domain.LoanCase? loanCase =
+            await _loanRepository.GetByIdAsync(_loanCaseId, CancellationToken.None);
+
+        Assert.NotNull(loanCase);
+        Assert.Equal(status, loanCase.Status);
+        Assert.Equal(versionBefore, loanCase.Version);
+        Assert.Equal(snapshotCountBefore, _snapshotRepository.StateSnapshots.Count);
     }
 
-
-    private async Task BuildSut(LoanCaseStatus status)
+    private async Task<int> VersionOfLoanCase()
     {
-        Domain.LoanCase loanCase = new LoanCaseSut().WithLoanCaseId(_loanCaseId)
-            .WithStatus(status).Build();
+        Domain.LoanCase? loanCase =
+            await _loanRepository.GetByIdAsync(_loanCaseId, CancellationToken.None);
 
-        await _loanRepository.AddAsync(loanCase);
+        Assert.NotNull(loanCase);
+        return loanCase.Version;
     }
 }

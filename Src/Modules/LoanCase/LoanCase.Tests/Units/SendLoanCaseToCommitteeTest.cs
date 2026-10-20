@@ -1,5 +1,6 @@
 ﻿using LoanCase.Application.Command.SendToCommittee;
 using LoanCase.Domain.Enum;
+using LoanCase.Domain.Snapshot;
 using LoanCase.Tests.Builder;
 using LoanCase.Tests.Repository;
 
@@ -7,23 +8,30 @@ namespace LoanCase.Tests.Units;
 
 public class SendLoanCaseToCommitteeTest
 {
+    private readonly LoanCaseGiven _given;
     private readonly Guid _loanCaseId = Guid.NewGuid();
-
+    private readonly SendLoanCaseToCommitteeHandler _handler;
     private readonly InMemoryLoanRepository _loanRepository;
+    private readonly InMemoryLoanCaseSnapshotRepository _snapshotRepository;
 
     public SendLoanCaseToCommitteeTest()
     {
         _loanRepository = new InMemoryLoanRepository();
+        _snapshotRepository = new InMemoryLoanCaseSnapshotRepository();
+        _handler = new SendLoanCaseToCommitteeHandler(
+            _loanRepository,
+            _snapshotRepository);
+        _given = new LoanCaseGiven(_loanRepository, _snapshotRepository);
     }
 
     [Fact]
     public async Task SendToCommittee_When_UnderReview_Should_Transition_To_CommitteeReview()
     {
-        await BuildSut(LoanCaseStatus.UnderReview);
+        await _given.AtStatusAsync(_loanCaseId, LoanCaseStatus.UnderReview);
+
         SendLoanCaseToCommitteeCommand command = new(_loanCaseId);
         SendLoanCaseToCommitteeResponse result =
-            await new SendLoanCaseToCommitteeHandler(_loanRepository).HandleAsync(command,
-                CancellationToken.None);
+            await _handler.HandleAsync(command, CancellationToken.None);
 
         Assert.True(result.IsSendToCommittee, result.Message);
 
@@ -31,29 +39,42 @@ public class SendLoanCaseToCommitteeTest
             await _loanRepository.GetByIdAsync(_loanCaseId, CancellationToken.None);
 
         Assert.NotNull(loanCase);
-
         Assert.Equal(LoanCaseStatus.CommitteeReview, loanCase.Status);
+        Assert.Equal(2, loanCase.Version);
+
+        Assert.Equal(2, _snapshotRepository.StateSnapshots.Count);
+
+        LoanCaseStateSnapshot lastSnapshot = _snapshotRepository.StateSnapshots.Last();
+        Assert.Equal(loanCase.Id, lastSnapshot.LoanCaseId);
+        Assert.Equal(LoanCaseStatus.CommitteeReview, lastSnapshot.Status);
+        Assert.Equal(2, lastSnapshot.Version);
     }
 
-    [Fact]
-    public async Task SendToCommittee_Fails_When_LoanCase_State_Is_Not_UnderReview()
+    [Theory]
+    [InlineData(LoanCaseStatus.Draft)]
+    [InlineData(LoanCaseStatus.CommitteeReview)]
+    [InlineData(LoanCaseStatus.Approved)]
+    [InlineData(LoanCaseStatus.Rejected)]
+    [InlineData(LoanCaseStatus.Closed)]
+    public async Task SendToCommittee_Fails_When_LoanCase_State_Is_Not_UnderReview(
+        LoanCaseStatus status)
     {
-        await BuildSut();
+        await _given.AtStatusAsync(_loanCaseId, status);
+        int snapshotCountBefore = _snapshotRepository.StateSnapshots.Count;
 
         SendLoanCaseToCommitteeCommand command = new(_loanCaseId);
         SendLoanCaseToCommitteeResponse result =
-            await new SendLoanCaseToCommitteeHandler(_loanRepository).HandleAsync(command,
-                CancellationToken.None);
+            await _handler.HandleAsync(command, CancellationToken.None);
 
         Assert.False(result.IsSendToCommittee, result.Message);
-    }
+        Assert.NotEmpty(result.Message);
 
+        Domain.LoanCase? loanCase =
+            await _loanRepository.GetByIdAsync(_loanCaseId, CancellationToken.None);
 
-    private async Task BuildSut(LoanCaseStatus status = LoanCaseStatus.Draft)
-    {
-        Domain.LoanCase loanCase = new LoanCaseSut().WithLoanCaseId(_loanCaseId)
-            .WithStatus(status).Build();
-
-        await _loanRepository.AddAsync(loanCase);
+        Assert.NotNull(loanCase);
+        Assert.Equal(status, loanCase.Status);
+        Assert.Equal(1, loanCase.Version);
+        Assert.Equal(snapshotCountBefore, _snapshotRepository.StateSnapshots.Count);
     }
 }

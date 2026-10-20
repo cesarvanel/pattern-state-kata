@@ -9,221 +9,78 @@ namespace LoanCase.Tests.Units;
 
 public class StateTransitionTest
 {
-    [Fact]
-    public void Submit_From_Draft_Should_Transition_To_UnderReview()
+    public enum LoanCaseAction
     {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.Draft);
+        Submit,
+        SendToCommittee,
+        Reject,
+        Approve,
+        Close
+    }
 
-        loanCase.Submit();
+    private static readonly Dictionary<(LoanCaseStatus From, LoanCaseAction Action),
+        LoanCaseStatus> AllowedTransitions = new()
+    {
+        [(LoanCaseStatus.Draft, LoanCaseAction.Submit)] = LoanCaseStatus.UnderReview,
+        [(LoanCaseStatus.UnderReview, LoanCaseAction.SendToCommittee)] =
+            LoanCaseStatus.CommitteeReview,
+        [(LoanCaseStatus.UnderReview, LoanCaseAction.Reject)] = LoanCaseStatus.Rejected,
+        [(LoanCaseStatus.CommitteeReview, LoanCaseAction.Approve)] = LoanCaseStatus.Approved,
+        [(LoanCaseStatus.CommitteeReview, LoanCaseAction.Reject)] = LoanCaseStatus.Rejected,
+        [(LoanCaseStatus.Approved, LoanCaseAction.Close)] = LoanCaseStatus.Closed
+    };
 
-        Assert.Equal(LoanCaseStatus.UnderReview, loanCase.Status);
+    [Theory]
+    [MemberData(nameof(AllowedTransitionCases))]
+    public void Allowed_Transition_Should_Move_LoanCase_To_Expected_Status(
+        LoanCaseStatus from,
+        LoanCaseAction action,
+        LoanCaseStatus expected)
+    {
+        Domain.LoanCase loanCase = Build(from);
+
+        Apply(loanCase, action);
+
+        Assert.Equal(expected, loanCase.Status);
+
+        if (action == LoanCaseAction.Reject)
+        {
+            Assert.NotNull(loanCase.RejectionDetails);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ForbiddenTransitionCases))]
+    public void Forbidden_Action_Should_Throw_And_Not_Mutate_LoanCase(
+        LoanCaseStatus from,
+        LoanCaseAction action)
+    {
+        Domain.LoanCase loanCase = Build(from);
+        RejectionDetails? rejectionDetailsBefore = loanCase.RejectionDetails;
+        int versionBefore = loanCase.Version;
+
+        InvalidLoanCaseStateActionException exception =
+            Assert.Throws<InvalidLoanCaseStateActionException>(() =>
+                Apply(loanCase, action));
+
+        Assert.NotEmpty(exception.Message);
+        Assert.Equal(from, loanCase.Status);
+        Assert.Equal(rejectionDetailsBefore, loanCase.RejectionDetails);
+        Assert.Equal(versionBefore, loanCase.Version);
     }
 
     [Fact]
-    public void Reject_From_Draft_Should_Throw_And_Not_Mutate_LoanCase()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.Draft);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() =>
-            loanCase.Reject(CreateRejectionDetails()));
-
-        Assert.Equal(LoanCaseStatus.Draft, loanCase.Status);
-        Assert.Null(loanCase.RejectionDetails);
-    }
-
-    [Fact]
-    public void SendToCommittee_From_Draft_Should_Throw()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.Draft);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.SendToCommittee());
-        Assert.Equal(LoanCaseStatus.Draft, loanCase.Status);
-    }
-
-    [Fact]
-    public void Approve_From_Draft_Should_Throw_With_Contextual_Message()
+    public void Forbidden_Action_Should_Report_Action_And_State_In_Message()
     {
         Domain.LoanCase loanCase = Build(LoanCaseStatus.Draft);
 
         InvalidLoanCaseStateActionException exception =
-            Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Approve());
+            Assert.Throws<InvalidLoanCaseStateActionException>(() =>
+                loanCase.Approve());
 
         Assert.Contains(nameof(Domain.LoanCase.Approve), exception.Message);
         Assert.Contains(nameof(LoanCaseStatus.Draft), exception.Message);
         Assert.Equal(LoanCaseStatus.Draft, loanCase.Status);
-    }
-
-    [Fact]
-    public void Close_From_Draft_Should_Throw()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.Draft);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Close());
-        Assert.Equal(LoanCaseStatus.Draft, loanCase.Status);
-    }
-
-    [Fact]
-    public void SendToCommittee_From_UnderReview_Should_Transition_To_CommitteeReview()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.UnderReview);
-
-        loanCase.SendToCommittee();
-
-        Assert.Equal(LoanCaseStatus.CommitteeReview, loanCase.Status);
-    }
-
-    [Fact]
-    public void Reject_From_UnderReview_Should_Transition_To_Rejected_With_Details()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.UnderReview);
-        RejectionDetails rejectionDetails = CreateRejectionDetails();
-
-        loanCase.Reject(rejectionDetails);
-
-        Assert.Equal(LoanCaseStatus.Rejected, loanCase.Status);
-        Assert.Equal(rejectionDetails, loanCase.RejectionDetails);
-    }
-
-    [Fact]
-    public void Submit_From_UnderReview_Should_Throw()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.UnderReview);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Submit());
-        Assert.Equal(LoanCaseStatus.UnderReview, loanCase.Status);
-    }
-
-    [Fact]
-    public void Approve_From_UnderReview_Should_Throw()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.UnderReview);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Approve());
-        Assert.Equal(LoanCaseStatus.UnderReview, loanCase.Status);
-    }
-
-    [Fact]
-    public void Close_From_UnderReview_Should_Throw()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.UnderReview);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Close());
-        Assert.Equal(LoanCaseStatus.UnderReview, loanCase.Status);
-    }
-
-    [Fact]
-    public void Approve_From_CommitteeReview_Should_Transition_To_Approved()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.CommitteeReview);
-
-        loanCase.Approve();
-
-        Assert.Equal(LoanCaseStatus.Approved, loanCase.Status);
-    }
-
-    [Fact]
-    public void Reject_From_CommitteeReview_Should_Transition_To_Rejected_With_Details()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.CommitteeReview);
-        RejectionDetails rejectionDetails = CreateRejectionDetails();
-
-        loanCase.Reject(rejectionDetails);
-
-        Assert.Equal(LoanCaseStatus.Rejected, loanCase.Status);
-        Assert.Equal(rejectionDetails, loanCase.RejectionDetails);
-    }
-
-    [Fact]
-    public void Submit_From_CommitteeReview_Should_Throw()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.CommitteeReview);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Submit());
-        Assert.Equal(LoanCaseStatus.CommitteeReview, loanCase.Status);
-    }
-
-    [Fact]
-    public void SendToCommittee_From_CommitteeReview_Should_Throw()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.CommitteeReview);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.SendToCommittee());
-        Assert.Equal(LoanCaseStatus.CommitteeReview, loanCase.Status);
-    }
-
-    [Fact]
-    public void Close_From_CommitteeReview_Should_Throw()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.CommitteeReview);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Close());
-        Assert.Equal(LoanCaseStatus.CommitteeReview, loanCase.Status);
-    }
-
-    [Fact]
-    public void Close_From_Approved_Should_Transition_To_Closed()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.Approved);
-
-        loanCase.Close();
-
-        Assert.Equal(LoanCaseStatus.Closed, loanCase.Status);
-    }
-
-    [Fact]
-    public void Submit_From_Approved_Should_Throw()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.Approved);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Submit());
-        Assert.Equal(LoanCaseStatus.Approved, loanCase.Status);
-    }
-
-    [Fact]
-    public void SendToCommittee_From_Approved_Should_Throw()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.Approved);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.SendToCommittee());
-        Assert.Equal(LoanCaseStatus.Approved, loanCase.Status);
-    }
-
-    [Fact]
-    public void Reject_From_Approved_Should_Throw_And_Not_Mutate_RejectionDetails()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.Approved);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() =>
-            loanCase.Reject(CreateRejectionDetails()));
-
-        Assert.Equal(LoanCaseStatus.Approved, loanCase.Status);
-        Assert.Null(loanCase.RejectionDetails);
-    }
-
-    [Fact]
-    public void Approve_From_Approved_Should_Throw()
-    {
-        Domain.LoanCase loanCase = Build(LoanCaseStatus.Approved);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Approve());
-        Assert.Equal(LoanCaseStatus.Approved, loanCase.Status);
-    }
-
-    [Theory]
-    [InlineData(LoanCaseStatus.Rejected)]
-    [InlineData(LoanCaseStatus.Closed)]
-    public void All_Actions_From_Terminal_State_Should_Throw(LoanCaseStatus status)
-    {
-        Domain.LoanCase loanCase = Build(status);
-
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Submit());
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.SendToCommittee());
-        Assert.Throws<InvalidLoanCaseStateActionException>(() =>
-            loanCase.Reject(CreateRejectionDetails()));
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Approve());
-        Assert.Throws<InvalidLoanCaseStateActionException>(() => loanCase.Close());
-
-        Assert.Equal(status, loanCase.Status);
     }
 
     [Fact]
@@ -246,6 +103,63 @@ public class StateTransitionTest
         Assert.NotNull(originalRejectionDetails);
         Assert.Equal(originalRejectionDetails, rehydrated.RejectionDetails);
         Assert.Equal(original.AttachedDocuments.Count, rehydrated.AttachedDocuments.Count);
+    }
+
+    public static IEnumerable<object[]> AllowedTransitionCases()
+    {
+        foreach (KeyValuePair<(LoanCaseStatus From, LoanCaseAction Action),
+                     LoanCaseStatus> transition in AllowedTransitions)
+        {
+            yield return
+            [
+                transition.Key.From,
+                transition.Key.Action,
+                transition.Value
+            ];
+        }
+    }
+
+    public static IEnumerable<object[]> ForbiddenTransitionCases()
+    {
+        foreach (LoanCaseStatus status in Enum.GetValues<LoanCaseStatus>())
+        {
+            foreach (LoanCaseAction action in Enum.GetValues<LoanCaseAction>())
+            {
+                if (!AllowedTransitions.ContainsKey((status, action)))
+                {
+                    yield return [status, action];
+                }
+            }
+        }
+    }
+
+    private static void Apply(Domain.LoanCase loanCase, LoanCaseAction action)
+    {
+        switch (action)
+        {
+            case LoanCaseAction.Submit:
+                loanCase.Submit();
+                break;
+
+            case LoanCaseAction.SendToCommittee:
+                loanCase.SendToCommittee();
+                break;
+
+            case LoanCaseAction.Reject:
+                loanCase.Reject(CreateRejectionDetails());
+                break;
+
+            case LoanCaseAction.Approve:
+                loanCase.Approve();
+                break;
+
+            case LoanCaseAction.Close:
+                loanCase.Close();
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(action), action, null);
+        }
     }
 
     private static Domain.LoanCase Build(LoanCaseStatus status)

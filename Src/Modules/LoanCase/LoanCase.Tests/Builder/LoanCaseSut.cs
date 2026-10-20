@@ -42,7 +42,6 @@ public sealed class LoanCaseSut
     private LoanCaseStatus _initialStatus = LoanCaseStatus.Draft;
     private Guid _loanCaseId = Guid.NewGuid();
 
-
     public LoanCaseSut WithLoanCaseId(Guid loanCaseId)
     {
         _loanCaseId = loanCaseId;
