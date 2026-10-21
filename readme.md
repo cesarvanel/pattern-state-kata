@@ -8,29 +8,144 @@ This kata models a **Loan Case Application System (Dossier de Prêt)**. The goal
 
 ## 📋 Business Rules & State Workflow
 
-A `LoanCase` goes through a strict life cycle with specific business rules governing each transition:
+A `LoanCase` goes through a strict life cycle with specific business rules governing each transition. The behaviour of each state lives in a dedicated class under `LoanCase.Domain/States/`, and the aggregate delegates every action to its current state (`LoanCase.Submit()`, `LoanCase.Approve()`, …).
 
-1. **Draft (DraftState):**
-    - Initial state when a loan application is created.
-    - The applicant details and requested loan amount can be modified.
-    - *Transition:* Can be submitted for evaluation if all required information is valid.
+### The six states
 
-2. **Submitted (SubmittedState):**
-    - The loan application is locked for editing by the applicant.
-    - Underwriting checks and automated risk assessments are triggered.
-    - *Transitions:* Can be Approved by an underwriter or Rejected.
+| State | `LoanCaseStatus` | State class | Meaning |
+|---|---|---|---|
+| Draft | `Draft` | `DraftState` | Initial state when the loan application is created. |
+| Under Review | `UnderReview` | `UnderReviewState` | Risk analysis performed by a loan officer / analyst. |
+| Committee Review | `CommitteeReview` | `CommitteeReviewState` | Awaiting the credit committee vote; the supporting documents are sealed. |
+| Approved | `Approved` | `ApprovedState` | Accepted by the committee, awaiting the signed offer and the disbursement. |
+| Rejected | `Rejected` | `RejectedState` | Refused — **terminal state**. |
+| Closed | `Closed` | `ClosedState` | Closed (disbursed) — **terminal state**. |
 
-3. **Approved (ApprovedState):**
-    - The loan is officially approved.
-    - Loan agreement documents are generated for the customer.
-    - *Transitions:* Can move to Activated once signed, or Cancelled if expired/refused.
+### Allowed transitions
 
-4. **Activated (ActivatedState):**
-    - The funds are disbursed, and repayment begins.
-    - *Terminal State:* No further state transitions allowed.
+| Current state | Action | Resulting state |
+|---|---|---|
+| — | `Create()` | `Draft` |
+| `Draft` | `Submit()` | `UnderReview` |
+| `UnderReview` | `SendToCommittee()` | `CommitteeReview` |
+| `UnderReview` | `Reject(rejectionDetails)` | `Rejected` |
+| `CommitteeReview` | `Approve()` | `Approved` |
+| `CommitteeReview` | `Reject(rejectionDetails)` | `Rejected` |
+| `Approved` | `Close()` | `Closed` |
 
-5. **Rejected / Cancelled (RejectedState / CancelledState):**
-    - *Terminal States:* Read-only states. No further edits or transitions are permitted.
+```mermaid
+stateDiagram-v2
+    [*] --> Draft : Create()
+    Draft --> UnderReview : Submit()
+    UnderReview --> CommitteeReview : SendToCommittee()
+    UnderReview --> Rejected : Reject()
+    CommitteeReview --> Approved : Approve()
+    CommitteeReview --> Rejected : Reject()
+    Approved --> Closed : Close()
+    Rejected --> [*]
+    Closed --> [*]
+```
+
+### How an illegal transition is rejected
+
+`LoanCaseState` declares every action as a `virtual` method whose default implementation throws `InvalidLoanCaseStateActionException`. A concrete state only overrides the actions it accepts:
+
+```csharp
+public sealed class DraftState : LoanCaseState
+{
+    public override LoanCaseStatus Status => LoanCaseStatus.Draft;
+
+    public override void Submit()
+    {
+        _loanCase.TransitionTo(new UnderReviewState(_loanCase));
+    }
+}
+```
+
+Consequently, calling `Approve()` on a `DraftState` throws — there is no `if/else` chain inside the aggregate, and the legal transitions live in one single place per state. The message names both the rejected action and the current state (`LoanCaseMessages.ActionNotAllowedInState`). `StateTransitionTest` enumerates the full transition matrix and asserts that a forbidden action throws **and leaves the aggregate untouched**.
+
+### Business invariants
+
+The `LoanCase` cannot be created unless:
+
+- the requested amount is greater than or equal to zero (`Amount` value object, `InvalidAmountValueException`);
+- at least one supporting document is provided (`LoanCaseAttachedDocumentException`);
+- **all** mandatory document types are present — `IdentityCard`, `Payslip`, `ProofOfAddress`, `TaxReturn` (`LoanCaseAttachedDocumentException`). A partial set is rejected;
+- each document respects the allowed extensions (`.pdf`, `.png`, `.jpeg`, `.jpg`) and a strictly positive size (`AttachedDocument` value object).
+
+A rejection always carries a mandatory reason and a `.pdf` rejection letter (`RejectionDetails` / `DocumentFile` value objects).
+
+> **Note:** the Draft state does **not** yet expose an amendment action — the application details and the supporting documents are frozen from creation. The state name and its `LoanCaseStatus` comment mention "modifiable", but no `Amend`/`Update` behaviour is implemented yet.
+
+### State journal (snapshot of each state)
+
+Every use case appends an immutable `LoanCaseStateSnapshot` to the history before updating the aggregate:
+
+- the history is **append-only** — a snapshot is never updated nor deleted (`ILoanCaseSnapshotRepository` only exposes `AddAsync` and `GetByVersionAsync`);
+- the snapshot carries the full state of the dossier (status, number, amount, created at, supporting documents, rejection details), the `SavedAt` timestamp, the `CreatedBy` actor and the `RolledBackFrom` link (the `CreatedBy` actor is currently only supplied by the `Restore` use case);
+- `Version` is the sequence number of the journal: it starts at `1` for the Draft snapshot and is incremented at each recorded state (`LoanCaseLifecycleTest` asserts `version == snapshot count` at each step of the life cycle);
+- the aggregate rebuilds its current state from a snapshot through `LoanCaseStateFactory.FromStatus(...)`, used by both `Rehydrate` (loading from the repository) and `Restore`.
+
+### The `Restore` use case (rollback)
+
+`RestoreLoanCaseStateHandler` rolls a dossier back to a previously recorded version:
+
+1. it loads the target snapshot (`GetByVersionAsync(loanCaseId, version)`);
+2. it applies its content to the aggregate (`LoanCase.Restore`);
+3. it appends a **new** snapshot holding the restored content, with `RolledBackFrom` pointing to the source snapshot.
+
+The journal therefore stays append-only and auditable: a rollback is never an erasure, it is a new recorded state that references the state it came from.
+
+`Restore` is refused when:
+
+- the current state is `Closed` — a closed dossier is final;
+- the snapshot belongs to another loan case (`InvalidLoanCaseSnapshotException`).
+
+## 🧩 Composition Root & Service Seam
+
+The command handlers never build their collaborators themselves. They receive them through their constructor and depend on the **abstraction**, never on the implementation:
+
+```csharp
+public sealed class ApproveLoanCaseHandler(
+    ILoanCaseRepository loanCaseRepository,
+    ILoanCaseSnapshotService snapshotService)
+    : ICommandHandler<ApproveLoanCaseCommand, ApproveLoanCaseResponse>
+```
+
+`ILoanCaseSnapshotService` (Application layer) is the seam: `LoanCaseSnapshotService` is its only implementation today, and it is the natural place to host the Unit of Work, the logging or the metrics of the state journal.
+
+Because of that, the concrete implementations are wired in **one single place** — the composition root — and nowhere else:
+
+| Layer | Role |
+|---|---|
+| `LoanCase.Application/Services/ILoanCaseSnapshotService.cs` | The contract the handlers depend on. |
+| `LoanCase.Application/Services/LoanCaseSnapshotService.cs` | The implementation (snapshot creation + persistence). |
+| `LoanCase.Tests/LoanCaseTestContext.cs` | The composition root of the kata: it builds the repositories, the snapshot service and the 7 handlers, and hands them over to the test classes. |
+
+Adding a decorator (transaction, logging, metrics) is a one-line change **in the composition root** — no handler is touched:
+
+```csharp
+SnapshotService = new LoanCaseSnapshotService(SnapshotRepository);
+// becomes, for instance:
+// SnapshotService = new TransactionalLoanCaseSnapshotService(new LoanCaseSnapshotService(SnapshotRepository), unitOfWork);
+```
+
+> In a real application the composition root is the host (`Program.cs` / the infrastructure layer). The kata has no host, so the test project plays that role.
+
+## 🗂️ Where the code lives
+
+| Concern | Location |
+|---|---|
+| Aggregate & business rules | `Src/Modules/LoanCase/LoanCase.Domain/LoanCase.cs` |
+| State classes | `Src/Modules/LoanCase/LoanCase.Domain/States/` |
+| State factory (rehydration) | `Src/Modules/LoanCase/LoanCase.Domain/Factory/LoanCaseStateFactory.cs` |
+| State journal (snapshot) | `Src/Modules/LoanCase/LoanCase.Domain/Snapshot/LoanCaseStateSnapshot.cs` |
+| Outbound ports | `Src/Modules/LoanCase/LoanCase.Domain/Port/Out/` |
+| Command handlers | `Src/Modules/LoanCase/LoanCase.Application/Command/` |
+| State journal service (contract + impl.) | `Src/Modules/LoanCase/LoanCase.Application/Services/` |
+| Composition root | `Src/Modules/LoanCase/LoanCase.Tests/LoanCaseTestContext.cs` |
+| Domain messages & exceptions | `Src/Modules/LoanCase/LoanCase.Domain/Messages/`, `.../Exceptions/` |
+| Tests | `Src/Modules/LoanCase/LoanCase.Tests/Units/`, `.../Builder/`, `.../Repository/` |
 
 ## 🛠️ Engineering Standards
 
@@ -51,7 +166,7 @@ Most use cases perform **two separate writes** that must succeed or fail togethe
 These writes are currently executed sequentially, **outside of any transaction**:
 
 ```csharp
-await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
+await snapshotService.ExecuteAsync(loanCase, ct);
 await loanCaseRepository.UpdateAsync(loanCase, ct);
 ```
 
@@ -62,6 +177,8 @@ The use cases affected are `Create`, `Submit`, `SendToCommittee`, `Approve`, `Re
 > The in-memory repositories used by the test suite mask this issue, because their writes never fail.
 
 **Planned fix:** introduce a transactional boundary (Unit of Work / `IDbContextTransaction`) so that the snapshot append and the aggregate update are committed atomically. The snapshot stays append-only and versioned — only the persistence boundary changes.
+
+> The seam already exists: the handlers depend on `ILoanCaseSnapshotService`, not on its implementation. The transaction is plugged in at the **composition root** (the single place where the concrete implementations are wired) — no handler has to be modified.
 
 **Acceptance criteria:**
 - [ ] A shared transaction abstraction (e.g. `IUnitOfWork`) usable by every handler.
@@ -85,11 +202,11 @@ To create physical folders and projects directly matching their purpose without 
 
 ```bash
 # Create the Domain Class Library directly in its dedicated module path
-dotnet new classlib -o src/Modules/LoanCase/LoanCase.Domain -n LoanCase.Domain
+dotnet new classlib -o Src/Modules/LoanCase/LoanCase.Domain -n LoanCase.Domain
 
 # Create the xUnit Test Project directly in its dedicated test path
-dotnet new xunit -o src/Modules/LoanCase/LoanCase.Tests -n LoanCase.Tests
-``
+dotnet new xunit -o Src/Modules/LoanCase/LoanCase.Tests -n LoanCase.Tests
+```
 
 🔍 **Explanation of the Options:**
 - `dotnet new`: Instructs the .NET CLI to generate a new project from a built-in template.
@@ -102,13 +219,13 @@ Once projects are created on the disk, they must be registered in the solution f
 
 ```bash
 # Register the Domain project in the solution file
-dotnet sln add src/Modules/LoanCase/LoanCase.Domain/LoanCase.Domain.csproj
+dotnet sln add Src/Modules/LoanCase/LoanCase.Domain/LoanCase.Domain.csproj
 
 # Register the Tests project in the solution file
-dotnet sln add src/Modules/LoanCase/LoanCase.Tests/LoanCase.Tests.csproj
+dotnet sln add Src/Modules/LoanCase/LoanCase.Tests/LoanCase.Tests.csproj
 
 # Link the Test project to the Domain project so tests can access domain logic
-dotnet add src/Modules/LoanCase/LoanCase.Tests/LoanCase.Tests.csproj reference src/Modules/LoanCase/LoanCase.Domain/LoanCase.Domain.csproj
+dotnet add Src/Modules/LoanCase/LoanCase.Tests/LoanCase.Tests.csproj reference Src/Modules/LoanCase/LoanCase.Domain/LoanCase.Domain.csproj
 ```
 
 🔍 **Explanation of the Options:**
@@ -133,3 +250,18 @@ dotnet new editorconfig
 3. Run the test suite to ensure everything is green:
    ```bash
    dotnet test
+   ```
+4. Run the test suite with coverage:
+   ```bash
+   dotnet test --collect:"XPlat Code Coverage"
+   ```
+
+## 🧪 Test Suite
+
+| Test file | What it covers |
+|---|---|
+| `StateTransitionTest` | The full transition matrix: allowed transitions move the aggregate, forbidden ones throw and leave it untouched. |
+| `LoanCaseLifecycleTest` | The end-to-end life cycle through the handlers, asserting the status and the journal version at each step. |
+| `CreateLoanCaseTest` | Creation invariants (mandatory documents, amount, numbering). |
+| `SubmitLoanCaseTest`, `SendLoanCaseToCommitteeTest`, `ApproveLoanCaseTest`, `RejectLoanCaseTest`, `CloseLoanCaseTest` | One use case each: success path, snapshot appended, rejection of an illegal transition. |
+| `RestoreLoanCaseStateTest` | Rollback to a previous version, appended snapshot with `RolledBackFrom`, and the failure cases (unknown dossier, unknown version, closed dossier). |

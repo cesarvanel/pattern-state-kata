@@ -10,7 +10,7 @@ namespace LoanCase.Application.Command.Reject;
 
 public class RejectLoanCaseHandler(
     ILoanCaseRepository loanCaseRepository,
-    ILoanCaseSnapshotRepository snapshotRepository)
+    ILoanCaseSnapshotService snapshotService)
     : ICommandHandler<RejectLoanCaseCommand, RejectLoanCaseResponse>
 {
     public async Task<RejectLoanCaseResponse> HandleAsync(RejectLoanCaseCommand command,
@@ -35,7 +35,7 @@ public class RejectLoanCaseHandler(
             return response;
         }
 
-        await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
+        await snapshotService.ExecuteAsync(loanCase, ct);
         await loanCaseRepository.UpdateAsync(loanCase, ct);
         response.IsRejected = true;
 

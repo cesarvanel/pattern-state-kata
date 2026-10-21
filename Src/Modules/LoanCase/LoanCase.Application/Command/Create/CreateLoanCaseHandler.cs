@@ -11,7 +11,7 @@ namespace LoanCase.Application.Command.Create;
 public class CreateLoanCaseHandler(
     ILoanCaseRepository loanCaseRepository,
     IGenerateLoanCaseNumberService generateLoanCaseNumberService,
-    ILoanCaseSnapshotRepository snapshotRepository)
+    ILoanCaseSnapshotService snapshotService)
     : ICommandHandler<CreateLoanCaseCommand, CreateLoanCaseResponse>
 {
     public async Task<CreateLoanCaseResponse> HandleAsync(CreateLoanCaseCommand command,
@@ -43,7 +43,7 @@ public class CreateLoanCaseHandler(
             return response;
         }
 
-        await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
+        await snapshotService.ExecuteAsync(loanCase, ct);
         await loanCaseRepository.AddAsync(loanCase, ct);
 
         response.IsCreated = true;

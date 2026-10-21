@@ -17,12 +17,11 @@ public class CreateLoanCaseTest
 
     public CreateLoanCaseTest()
     {
-        _loanCaseRepository = new InMemoryLoanRepository();
-        _generateLoanCaseNumberService = new InMemoryGenerateLoanCaseNumberService(null);
-        _loanCaseSnapshotRepository = new InMemoryLoanCaseSnapshotRepository();
-        _handler = new CreateLoanCaseHandler(_loanCaseRepository,
-            _generateLoanCaseNumberService,
-            _loanCaseSnapshotRepository);
+        LoanCaseTestContext context = new();
+        _loanCaseRepository = context.LoanCaseRepository;
+        _generateLoanCaseNumberService = context.GenerateLoanCaseNumberService;
+        _loanCaseSnapshotRepository = context.SnapshotRepository;
+        _handler = context.CreateHandler;
     }
 
     [Fact]

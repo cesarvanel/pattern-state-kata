@@ -9,7 +9,7 @@ namespace LoanCase.Application.Command.Submit;
 
 public sealed class SubmitLoanCaseHandler(
     ILoanCaseRepository loanCaseRepository,
-    ILoanCaseSnapshotRepository snapshotRepository)
+    ILoanCaseSnapshotService snapshotService)
     : ICommandHandler<SubmitLoanCaseCommand, SubmitLoanCaseResponse>
 {
     public async Task<SubmitLoanCaseResponse> HandleAsync(SubmitLoanCaseCommand command,
@@ -31,7 +31,7 @@ public sealed class SubmitLoanCaseHandler(
             return response;
         }
 
-        await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
+        await snapshotService.ExecuteAsync(loanCase, ct);
         await loanCaseRepository.UpdateAsync(loanCase, ct);
 
         response.IsSubmitted = true;

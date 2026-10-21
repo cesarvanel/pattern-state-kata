@@ -16,9 +16,10 @@ public class ApproveLoanCaseTest
 
     public ApproveLoanCaseTest()
     {
-        _loanRepository = new InMemoryLoanRepository();
-        _snapshotRepository = new InMemoryLoanCaseSnapshotRepository();
-        _handler = new ApproveLoanCaseHandler(_loanRepository, _snapshotRepository);
+        LoanCaseTestContext context = new();
+        _loanRepository = context.LoanCaseRepository;
+        _snapshotRepository = context.SnapshotRepository;
+        _handler = context.ApproveHandler;
         _given = new LoanCaseGiven(_loanRepository, _snapshotRepository);
     }
 

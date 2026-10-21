@@ -9,7 +9,7 @@ namespace LoanCase.Application.Command.Approve;
 
 public sealed class ApproveLoanCaseHandler(
     ILoanCaseRepository loanCaseRepository,
-    ILoanCaseSnapshotRepository snapshotRepository)
+    ILoanCaseSnapshotService snapshotService)
     : ICommandHandler<ApproveLoanCaseCommand, ApproveLoanCaseResponse>
 {
     public async Task<ApproveLoanCaseResponse> HandleAsync(ApproveLoanCaseCommand command,
@@ -31,7 +31,7 @@ public sealed class ApproveLoanCaseHandler(
             return response;
         }
 
-        await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
+        await snapshotService.ExecuteAsync(loanCase, ct);
         await loanCaseRepository.UpdateAsync(loanCase, ct);
         response.IsApproved = true;
 

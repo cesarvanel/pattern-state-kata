@@ -29,19 +29,16 @@ public class LoanCaseLifecycleTest
 
     public LoanCaseLifecycleTest()
     {
-        _loanRepository = new InMemoryLoanRepository();
-        _snapshotRepository = new InMemoryLoanCaseSnapshotRepository();
-        _generateLoanCaseNumberService = new InMemoryGenerateLoanCaseNumberService(null);
-
-        _createHandler = new CreateLoanCaseHandler(_loanRepository,
-            _generateLoanCaseNumberService,
-            _snapshotRepository);
-        _submitHandler = new SubmitLoanCaseHandler(_loanRepository, _snapshotRepository);
-        _sendToCommitteeHandler =
-            new SendLoanCaseToCommitteeHandler(_loanRepository, _snapshotRepository);
-        _approveHandler = new ApproveLoanCaseHandler(_loanRepository, _snapshotRepository);
-        _closeHandler = new CloseLoanCaseHandler(_loanRepository, _snapshotRepository);
-        _rejectHandler = new RejectLoanCaseHandler(_loanRepository, _snapshotRepository);
+        LoanCaseTestContext context = new();
+        _loanRepository = context.LoanCaseRepository;
+        _snapshotRepository = context.SnapshotRepository;
+        _generateLoanCaseNumberService = context.GenerateLoanCaseNumberService;
+        _createHandler = context.CreateHandler;
+        _submitHandler = context.SubmitHandler;
+        _sendToCommitteeHandler = context.SendToCommitteeHandler;
+        _approveHandler = context.ApproveHandler;
+        _closeHandler = context.CloseHandler;
+        _rejectHandler = context.RejectHandler;
     }
 
     [Fact]

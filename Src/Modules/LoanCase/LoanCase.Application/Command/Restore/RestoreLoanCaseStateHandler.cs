@@ -10,7 +10,8 @@ namespace LoanCase.Application.Command.Restore;
 
 public class RestoreLoanCaseStateHandler(
     ILoanCaseRepository loanCaseRepository,
-    ILoanCaseSnapshotRepository loanCaseSnapshotRepository)
+    ILoanCaseSnapshotRepository loanCaseSnapshotRepository,
+    ILoanCaseSnapshotService snapshotService)
     : ICommandHandler<RestoreLoanCaseStateCommand, RestoreLoanCaseStateResponse>
 {
     public async Task<RestoreLoanCaseStateResponse> HandleAsync(RestoreLoanCaseStateCommand command,
@@ -39,7 +40,7 @@ public class RestoreLoanCaseStateHandler(
             return response;
         }
 
-        await new LoanCaseSnapshotService(loanCaseSnapshotRepository).ExecuteAsync(loanCase,
+        await snapshotService.ExecuteAsync(loanCase,
             ct,
             command.CreatedBy,
             restoredFromSnapshotId);

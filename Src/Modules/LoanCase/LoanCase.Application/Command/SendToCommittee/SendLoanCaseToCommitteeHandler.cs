@@ -9,7 +9,7 @@ namespace LoanCase.Application.Command.SendToCommittee;
 
 public sealed class SendLoanCaseToCommitteeHandler(
     ILoanCaseRepository loanCaseRepository,
-    ILoanCaseSnapshotRepository snapshotRepository)
+    ILoanCaseSnapshotService snapshotService)
     : ICommandHandler<SendLoanCaseToCommitteeCommand, SendLoanCaseToCommitteeResponse>
 {
     public async Task<SendLoanCaseToCommitteeResponse> HandleAsync(
@@ -32,7 +32,7 @@ public sealed class SendLoanCaseToCommitteeHandler(
             return response;
         }
 
-        await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
+        await snapshotService.ExecuteAsync(loanCase, ct);
 
         await loanCaseRepository.UpdateAsync(loanCase, ct);
         response.IsSendToCommittee = true;

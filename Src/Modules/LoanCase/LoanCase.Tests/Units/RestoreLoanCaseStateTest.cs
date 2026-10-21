@@ -17,9 +17,10 @@ public class RestoreLoanCaseStateTest
 
     public RestoreLoanCaseStateTest()
     {
-        _loanRepository = new InMemoryLoanRepository();
-        _snapshotRepository = new InMemoryLoanCaseSnapshotRepository();
-        _handler = new RestoreLoanCaseStateHandler(_loanRepository, _snapshotRepository);
+        LoanCaseTestContext context = new();
+        _loanRepository = context.LoanCaseRepository;
+        _snapshotRepository = context.SnapshotRepository;
+        _handler = context.RestoreHandler;
     }
 
     [Fact]

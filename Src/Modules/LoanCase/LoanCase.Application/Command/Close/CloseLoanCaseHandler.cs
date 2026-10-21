@@ -9,7 +9,7 @@ namespace LoanCase.Application.Command.Close;
 
 public sealed class CloseLoanCaseHandler(
     ILoanCaseRepository loanCaseRepository,
-    ILoanCaseSnapshotRepository snapshotRepository)
+    ILoanCaseSnapshotService snapshotService)
     : ICommandHandler<CloseLoanCaseCommand, CloseLoanCaseResponse>
 {
     public async Task<CloseLoanCaseResponse> HandleAsync(CloseLoanCaseCommand command,
@@ -31,7 +31,7 @@ public sealed class CloseLoanCaseHandler(
             return response;
         }
 
-        await new LoanCaseSnapshotService(snapshotRepository).ExecuteAsync(loanCase, ct);
+        await snapshotService.ExecuteAsync(loanCase, ct);
         await loanCaseRepository.UpdateAsync(loanCase, ct);
         response.IsClosed = true;
 
