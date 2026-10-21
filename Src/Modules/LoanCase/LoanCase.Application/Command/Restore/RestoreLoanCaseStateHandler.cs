@@ -10,7 +10,6 @@ namespace LoanCase.Application.Command.Restore;
 
 public class RestoreLoanCaseStateHandler(
     ILoanCaseRepository loanCaseRepository,
-    ILoanCaseSnapshotRepository loanCaseSnapshotRepository,
     ILoanCaseSnapshotService snapshotService)
     : ICommandHandler<RestoreLoanCaseStateCommand, RestoreLoanCaseStateResponse>
 {
@@ -19,20 +18,14 @@ public class RestoreLoanCaseStateHandler(
     {
         RestoreLoanCaseStateResponse response = new();
         Domain.LoanCase? loanCase;
-        Guid restoredFromSnapshotId;
+        LoanCaseStateSnapshot restoredEntry;
 
         try
         {
             loanCase = await loanCaseRepository.GetByIdAsync(command.LoanCaseId, ct) ??
                        throw new LoanCaseNotFoundException(command.LoanCaseId.ToString());
 
-            LoanCaseStateSnapshot loanCaseSnapshot =
-                await loanCaseSnapshotRepository.GetByVersionAsync(command.LoanCaseId,
-                    command.Version,
-                    ct) ?? throw new LoanCaseSnapshotNotFoundException(
-                    $"{command.LoanCaseId}:{command.Version}");
-            loanCase.Restore(loanCaseSnapshot);
-            restoredFromSnapshotId = loanCaseSnapshot.Id;
+            restoredEntry = loanCase.Restore(command.Version, DateTime.UtcNow, command.CreatedBy);
         }
         catch (DomainException e)
         {
@@ -40,15 +33,12 @@ public class RestoreLoanCaseStateHandler(
             return response;
         }
 
-        await snapshotService.ExecuteAsync(loanCase,
-            ct,
-            command.CreatedBy,
-            restoredFromSnapshotId);
+        await snapshotService.SaveAsync(restoredEntry, ct);
 
         await loanCaseRepository.UpdateAsync(loanCase, ct);
 
         response.IsRestored = true;
-        response.RestoredVersion = loanCase.Version;
+        response.RestoredVersion = restoredEntry.Version;
 
         return response;
     }

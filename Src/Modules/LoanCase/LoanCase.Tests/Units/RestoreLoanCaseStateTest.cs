@@ -142,16 +142,13 @@ public class RestoreLoanCaseStateTest
     {
         Domain.LoanCase loanCase = new LoanCaseSut().WithLoanCaseId(_loanCaseId).Build();
 
-        LoanCaseStateSnapshot draftSnapshot =
-            loanCase.SaveState(Guid.NewGuid(), DateTime.UtcNow);
+        LoanCaseStateSnapshot draftSnapshot = loanCase.RecordState(DateTime.UtcNow);
 
         loanCase.Submit();
-        LoanCaseStateSnapshot underReviewSnapshot =
-            loanCase.SaveState(Guid.NewGuid(), DateTime.UtcNow);
+        LoanCaseStateSnapshot underReviewSnapshot = loanCase.RecordState(DateTime.UtcNow);
 
         loanCase.SendToCommittee();
-        LoanCaseStateSnapshot committeeReviewSnapshot =
-            loanCase.SaveState(Guid.NewGuid(), DateTime.UtcNow);
+        LoanCaseStateSnapshot committeeReviewSnapshot = loanCase.RecordState(DateTime.UtcNow);
 
         await _loanRepository.AddAsync(loanCase);
         await _snapshotRepository.AddAsync(draftSnapshot, CancellationToken.None);

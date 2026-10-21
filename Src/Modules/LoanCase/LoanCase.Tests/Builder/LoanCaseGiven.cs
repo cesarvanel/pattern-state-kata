@@ -16,8 +16,7 @@ public sealed class LoanCaseGiven(
             .Build();
 
         await loanRepository.AddAsync(loanCase);
-        await snapshotRepository.AddAsync(
-            loanCase.SaveState(Guid.NewGuid(), DateTime.UtcNow));
+        await snapshotRepository.AddAsync(loanCase.RecordState(DateTime.UtcNow));
 
         return loanCase;
     }

@@ -32,7 +32,7 @@ public sealed class SendLoanCaseToCommitteeHandler(
             return response;
         }
 
-        await snapshotService.ExecuteAsync(loanCase, ct);
+        await snapshotService.ExecuteAsync(loanCase, ct: ct);
 
         await loanCaseRepository.UpdateAsync(loanCase, ct);
         response.IsSendToCommittee = true;

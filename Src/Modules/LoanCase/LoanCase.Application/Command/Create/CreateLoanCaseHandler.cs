@@ -43,7 +43,7 @@ public class CreateLoanCaseHandler(
             return response;
         }
 
-        await snapshotService.ExecuteAsync(loanCase, ct);
+        await snapshotService.ExecuteAsync(loanCase, ct: ct);
         await loanCaseRepository.AddAsync(loanCase, ct);
 
         response.IsCreated = true;

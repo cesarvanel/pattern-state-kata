@@ -13,6 +13,12 @@ public static class LoanCaseMessages
     public const string LoanCaseIdMismatch =
         "L'identifiant du dossier de prêt fourni ne correspond pas à l'identifiant attendu.";
 
+    public const string LoanCaseStateHistoryGap =
+        "L'historique des états du dossier de prêt contient une rupture de séquence.";
+
+    public const string LoanCaseStateHistoryMismatch =
+        "L'état courant du dossier de prêt ne correspond pas à sa dernière version enregistrée.";
+
     public static string ActionNotAllowedInState(string action, LoanCaseStatus status)
     {
         return $"L'action '{action}' n'est pas autorisée dans l'état '{status}'.";

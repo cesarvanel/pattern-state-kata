@@ -11,7 +11,6 @@ public class SubmitLoanCaseTest
     private readonly SubmitLoanCaseHandler _handler;
     private readonly Guid _loanCaseId = Guid.NewGuid();
     private readonly InMemoryLoanRepository _loanRepository;
-    private readonly Guid _snapshotId = Guid.NewGuid();
     private readonly InMemoryLoanCaseSnapshotRepository _snapshotRepository;
 
     public SubmitLoanCaseTest()
@@ -69,7 +68,7 @@ public class SubmitLoanCaseTest
         Domain.LoanCase loanCase = new LoanCaseSut().WithLoanCaseId(_loanCaseId).Build();
 
         await _loanRepository.AddAsync(loanCase);
-        LoanCaseStateSnapshot snapshot = loanCase.SaveState(_snapshotId, DateTime.UtcNow);
+        LoanCaseStateSnapshot snapshot = loanCase.RecordState(DateTime.UtcNow);
         await _snapshotRepository.AddAsync(snapshot, CancellationToken.None);
     }
 

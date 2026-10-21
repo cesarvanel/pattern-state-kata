@@ -79,27 +79,32 @@ A rejection always carries a mandatory reason and a `.pdf` rejection letter (`Re
 
 ### State journal (snapshot of each state)
 
-Every use case appends an immutable `LoanCaseStateSnapshot` to the history before updating the aggregate:
+The **aggregate owns its journal**. `LoanCase.StateHistory` holds the immutable `LoanCaseStateSnapshot` entries, and `RecordState(...)` appends the current state of the dossier to it:
 
-- the history is **append-only** — a snapshot is never updated nor deleted (`ILoanCaseSnapshotRepository` only exposes `AddAsync` and `GetByVersionAsync`);
-- the snapshot carries the full state of the dossier (status, number, amount, created at, supporting documents, rejection details), the `SavedAt` timestamp, the `CreatedBy` actor and the `RolledBackFrom` link (the `CreatedBy` actor is currently only supplied by the `Restore` use case);
-- `Version` is the sequence number of the journal: it starts at `1` for the Draft snapshot and is incremented at each recorded state (`LoanCaseLifecycleTest` asserts `version == snapshot count` at each step of the life cycle);
+- the history is **append-only** — an entry is never updated nor deleted (`ILoanCaseSnapshotRepository` only exposes `AddAsync` and `GetByVersionAsync`);
+- an entry is a **Memento**: an immutable value object (a `record` whose collections are `ImmutableArray`), built once by the aggregate and never altered afterwards;
+- an entry carries the full state of the dossier (status, number, amount, created at, supporting documents, rejection details), the `SavedAt` timestamp, the `CreatedBy` actor and the `RolledBackFrom` link (the `CreatedBy` actor is currently only supplied by the `Restore` use case);
+- `Version` is **derived** from the journal (`StateHistory.Count`), never incremented by hand: the sequence therefore cannot be duplicated nor skipped, and it always equals the number of recorded states (`LoanCaseLifecycleTest` asserts `version == snapshot count` at each step of the life cycle);
 - the aggregate rebuilds its current state from a snapshot through `LoanCaseStateFactory.FromStatus(...)`, used by both `Rehydrate` (loading from the repository) and `Restore`.
+
+`Rehydrate` **validates** the journal it is given: the last entry must belong to the dossier, its sequence must be the last one (no gap) and its status must be the current status. An inconsistent journal is rejected with `InvalidLoanCaseSnapshotException`.
 
 ### The `Restore` use case (rollback)
 
 `RestoreLoanCaseStateHandler` rolls a dossier back to a previously recorded version:
 
-1. it loads the target snapshot (`GetByVersionAsync(loanCaseId, version)`);
-2. it applies its content to the aggregate (`LoanCase.Restore`);
-3. it appends a **new** snapshot holding the restored content, with `RolledBackFrom` pointing to the source snapshot.
+1. it loads the dossier from the repository;
+2. it asks the aggregate to roll back: `LoanCase.Restore(version, savedAt, createdBy)` — the aggregate **resolves the target entry in its own journal**, applies its content **and records the rollback** (it returns the new entry);
+3. it persists the entry returned by the domain (`snapshotService.SaveAsync`).
 
-The journal therefore stays append-only and auditable: a rollback is never an erasure, it is a new recorded state that references the state it came from.
+The rollback is therefore **atomic in the domain**: the aggregate is never left in a restored state without its trace. The journal stays append-only and auditable: a rollback is never an erasure, it is a new recorded state that references the state it came from — rolling back to version `1` produces version `4` whose content is the content of version `1`.
 
 `Restore` is refused when:
 
 - the current state is `Closed` — a closed dossier is final;
-- the snapshot belongs to another loan case (`InvalidLoanCaseSnapshotException`).
+- the requested version is unknown to the dossier (`LoanCaseSnapshotNotFoundException`).
+
+The handler therefore depends only on `ILoanCaseRepository` and `ILoanCaseSnapshotService`: it never reads the journal itself, the aggregate owns it.
 
 ## 🧩 Composition Root & Service Seam
 
@@ -132,14 +137,41 @@ SnapshotService = new LoanCaseSnapshotService(SnapshotRepository);
 
 > In a real application the composition root is the host (`Program.cs` / the infrastructure layer). The kata has no host, so the test project plays that role.
 
+## 🧬 Design patterns used
+
+### State — `LoanCase.Domain/States/`
+
+| Role (GoF) | Implementation |
+|---|---|
+| Context | `LoanCase` holds a reference to its current state and delegates every action to it (`Submit`, `Approve`, `Close`, …) |
+| State interface | `LoanCaseState` declares every action as `virtual`; the default implementation throws `InvalidLoanCaseStateActionException` |
+| Concrete states | `DraftState`, `UnderReviewState`, `CommitteeReviewState`, `ApprovedState`, `RejectedState`, `ClosedState` — each overrides only the actions it accepts and calls `TransitionTo(...)` |
+| Client | The command handlers, which only know the aggregate |
+
+`TransitionTo` is `internal`: a state can only be changed from inside the domain.
+
+### Memento — `LoanCase.Domain/Snapshot/`
+
+| Role (GoF) | Implementation |
+|---|---|
+| Originator | `LoanCase` — it produces its own mementos (`RecordState`) and restores itself from one (`Restore`) |
+| Memento | `LoanCaseStateSnapshot` — an immutable `record` holding the full state of the dossier, its `Version` and the `RolledBackFrom` link |
+| Caretaker | The aggregate itself owns the history (`StateHistory`); the application service (`LoanCaseSnapshotService`) persists it |
+
+Two deliberate deviations from the textbook, both driven by the DDD context:
+
+- **The memento is not hidden.** In the GoF version the memento is a private nested class that nobody may read. Here the snapshot is a persisted audit record: it has to be readable (timeline, rollback, audit trail) and storable, so it lives in its own file with a public API. What is preserved is the rule that matters — the memento is **immutable** (a `record` with `ImmutableArray` collections and no setter), so a written journal entry can never be altered.
+- **The caretaker is the originator.** Since the aggregate owns its journal, it resolves the target version of a rollback by itself instead of receiving a snapshot from the outside.
+
 ## 🗂️ Where the code lives
 
 | Concern | Location |
 |---|---|
 | Aggregate & business rules | `Src/Modules/LoanCase/LoanCase.Domain/LoanCase.cs` |
+| State journal (owned by the aggregate) | `Src/Modules/LoanCase/LoanCase.Domain/LoanCase.cs` (`StateHistory`, `RecordState`) |
+| State journal entry | `Src/Modules/LoanCase/LoanCase.Domain/Snapshot/LoanCaseStateSnapshot.cs` |
 | State classes | `Src/Modules/LoanCase/LoanCase.Domain/States/` |
 | State factory (rehydration) | `Src/Modules/LoanCase/LoanCase.Domain/Factory/LoanCaseStateFactory.cs` |
-| State journal (snapshot) | `Src/Modules/LoanCase/LoanCase.Domain/Snapshot/LoanCaseStateSnapshot.cs` |
 | Outbound ports | `Src/Modules/LoanCase/LoanCase.Domain/Port/Out/` |
 | Command handlers | `Src/Modules/LoanCase/LoanCase.Application/Command/` |
 | State journal service (contract + impl.) | `Src/Modules/LoanCase/LoanCase.Application/Services/` |
@@ -166,7 +198,7 @@ Most use cases perform **two separate writes** that must succeed or fail togethe
 These writes are currently executed sequentially, **outside of any transaction**:
 
 ```csharp
-await snapshotService.ExecuteAsync(loanCase, ct);
+await snapshotService.ExecuteAsync(loanCase, ct: ct);
 await loanCaseRepository.UpdateAsync(loanCase, ct);
 ```
 
@@ -265,3 +297,4 @@ dotnet new editorconfig
 | `CreateLoanCaseTest` | Creation invariants (mandatory documents, amount, numbering). |
 | `SubmitLoanCaseTest`, `SendLoanCaseToCommitteeTest`, `ApproveLoanCaseTest`, `RejectLoanCaseTest`, `CloseLoanCaseTest` | One use case each: success path, snapshot appended, rejection of an illegal transition. |
 | `RestoreLoanCaseStateTest` | Rollback to a previous version, appended snapshot with `RolledBackFrom`, and the failure cases (unknown dossier, unknown version, closed dossier). |
+| `LoanCaseStateHistoryTest` | The journal guarantees: continuous sequence, captured state, append-only rollback, unknown version refused, and the consistency checks performed by `Rehydrate`. |

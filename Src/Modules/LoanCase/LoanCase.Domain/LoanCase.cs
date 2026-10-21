@@ -11,6 +11,7 @@ namespace LoanCase.Domain;
 public class LoanCase
 {
     private readonly List<AttachedDocument> _attachedDocuments;
+    private readonly List<LoanCaseStateSnapshot> _stateHistory;
     private LoanCaseState _state = null!;
 
     private LoanCase(Guid id,
@@ -19,8 +20,8 @@ public class LoanCase
         DateTime createdAt,
         Amount amount,
         RejectionDetails? rejectionDetails,
-        int version,
-        List<AttachedDocument> attachedDocuments)
+        List<AttachedDocument> attachedDocuments,
+        IReadOnlyList<LoanCaseStateSnapshot> stateHistory)
     {
         Id = id;
         BorrowerId = borrowerId;
@@ -29,12 +30,14 @@ public class LoanCase
         Amount = amount;
         RejectionDetails = rejectionDetails;
         _attachedDocuments = [.. attachedDocuments];
-        Version = version;
+        _stateHistory = [.. stateHistory];
     }
 
     public LoanCaseStatus Status => _state.Status;
 
-    public int Version { get; private set; }
+    public int Version => _stateHistory.Count;
+
+    public IReadOnlyCollection<LoanCaseStateSnapshot> StateHistory => _stateHistory.AsReadOnly();
 
     public Guid Id { get; }
     public Guid BorrowerId { get; private set; }
@@ -78,8 +81,8 @@ public class LoanCase
             createdAt,
             new Amount(amount),
             null,
-            0,
-            attachedDocuments);
+            attachedDocuments,
+            []);
 
         loanCase.TransitionTo(new DraftState(loanCase));
 
@@ -94,16 +97,20 @@ public class LoanCase
         List<AttachedDocument> attachedDocuments,
         LoanCaseStatus status,
         RejectionDetails? rejectionDetails,
-        int version = 0)
+        IReadOnlyList<LoanCaseStateSnapshot>? stateHistory = null)
     {
+        IReadOnlyList<LoanCaseStateSnapshot> history = stateHistory ?? [];
+
+        EnsureHistoryIsConsistent(id, status, history);
+
         LoanCase loanCase = new(id,
             borrowerId,
             number,
             createdAt,
             amount,
             rejectionDetails,
-            version,
-            attachedDocuments);
+            attachedDocuments,
+            history);
 
         loanCase._state = LoanCaseStateFactory.FromStatus(loanCase, status);
 
@@ -140,50 +147,81 @@ public class LoanCase
         _state = nextState;
     }
 
-    public LoanCaseStateSnapshot SaveState(
-        Guid id,
-        DateTime dateTime,
+    public LoanCaseStateSnapshot RecordState(DateTime savedAt,
         Guid? createdBy = null,
         Guid? rolledBackFrom = null)
     {
-        int version = ++Version;
-        return new LoanCaseStateSnapshot(
-            id,
+        LoanCaseStateSnapshot entry = new(Guid.NewGuid(),
             Id,
             BorrowerId,
             Status,
             Number,
             Amount.Value,
             CreatedAt,
-            dateTime,
+            savedAt,
             createdBy,
-            version,
+            _stateHistory.Count + 1,
             rolledBackFrom,
             [.. _attachedDocuments],
             RejectionDetails);
+
+        _stateHistory.Add(entry);
+
+        return entry;
     }
 
-    public void Restore(LoanCaseStateSnapshot snapshot)
+    public LoanCaseStateSnapshot Restore(int version,
+        DateTime savedAt,
+        Guid? createdBy = null)
     {
-        if (Id != snapshot.LoanCaseId)
-        {
-            throw new InvalidLoanCaseSnapshotException(LoanCaseMessages.LoanCaseIdMismatch);
-        }
-
         if (Status == LoanCaseStatus.Closed)
         {
             throw new InvalidLoanCaseStateActionException(
                 LoanCaseMessages.ActionNotAllowedInState(nameof(Restore), Status));
         }
 
-        BorrowerId = snapshot.BorrowerId;
-        Number = snapshot.Number;
-        Amount = new Amount(snapshot.Amount);
-        CreatedAt = snapshot.CreatedAt;
-        RejectionDetails = snapshot.RejectionDetails;
+        LoanCaseStateSnapshot target = _stateHistory
+                                           .FirstOrDefault(entry => entry.Version == version)
+                                       ?? throw new LoanCaseSnapshotNotFoundException(
+                                           $"{Id}:{version}");
+
+        BorrowerId = target.BorrowerId;
+        Number = target.Number;
+        Amount = new Amount(target.Amount);
+        CreatedAt = target.CreatedAt;
+        RejectionDetails = target.RejectionDetails;
         _attachedDocuments.Clear();
-        _attachedDocuments.AddRange(snapshot.AttachedDocuments);
-        _state = LoanCaseStateFactory.FromStatus(this, snapshot.Status);
-        Version = Math.Max(Version, snapshot.Version);
+        _attachedDocuments.AddRange(target.AttachedDocuments);
+        _state = LoanCaseStateFactory.FromStatus(this, target.Status);
+
+        return RecordState(savedAt, createdBy, target.Id);
+    }
+
+    private static void EnsureHistoryIsConsistent(Guid id,
+        LoanCaseStatus status,
+        IReadOnlyList<LoanCaseStateSnapshot> history)
+    {
+        if (history.Count == 0)
+        {
+            return;
+        }
+
+        LoanCaseStateSnapshot lastEntry = history[^1];
+
+        if (lastEntry.LoanCaseId != id)
+        {
+            throw new InvalidLoanCaseSnapshotException(LoanCaseMessages.LoanCaseIdMismatch);
+        }
+
+        if (lastEntry.Version != history.Count)
+        {
+            throw new InvalidLoanCaseSnapshotException(LoanCaseMessages.LoanCaseStateHistoryGap);
+        }
+
+        if (lastEntry.Status != status)
+        {
+            throw new InvalidLoanCaseSnapshotException(
+                LoanCaseMessages.LoanCaseStateHistoryMismatch);
+        }
     }
 }

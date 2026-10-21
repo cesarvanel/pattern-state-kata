@@ -35,7 +35,7 @@ public class RejectLoanCaseHandler(
             return response;
         }
 
-        await snapshotService.ExecuteAsync(loanCase, ct);
+        await snapshotService.ExecuteAsync(loanCase, ct: ct);
         await loanCaseRepository.UpdateAsync(loanCase, ct);
         response.IsRejected = true;
 

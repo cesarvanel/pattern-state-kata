@@ -6,7 +6,6 @@ using LoanCase.Application.Command.Restore;
 using LoanCase.Application.Command.SendToCommittee;
 using LoanCase.Application.Command.Submit;
 using LoanCase.Application.Services;
-
 using LoanCase.Tests.Repository;
 
 namespace LoanCase.Tests;
@@ -30,9 +29,7 @@ public sealed class LoanCaseTestContext
         ApproveHandler = new ApproveLoanCaseHandler(LoanCaseRepository, SnapshotService);
         RejectHandler = new RejectLoanCaseHandler(LoanCaseRepository, SnapshotService);
         CloseHandler = new CloseLoanCaseHandler(LoanCaseRepository, SnapshotService);
-        RestoreHandler = new RestoreLoanCaseStateHandler(LoanCaseRepository,
-            SnapshotRepository,
-            SnapshotService);
+        RestoreHandler = new RestoreLoanCaseStateHandler(LoanCaseRepository, SnapshotService);
     }
 
     public InMemoryLoanRepository LoanCaseRepository { get; }

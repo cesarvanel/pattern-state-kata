@@ -1,4 +1,6 @@
-﻿using LoanCase.Domain.Enum;
+﻿using System.Collections.Immutable;
+
+using LoanCase.Domain.Enum;
 using LoanCase.Domain.Vo;
 
 namespace LoanCase.Domain.Snapshot;
@@ -15,5 +17,5 @@ public record LoanCaseStateSnapshot(
     Guid? CreatedBy,
     int Version,
     Guid? RolledBackFrom,
-    List<AttachedDocument> AttachedDocuments,
+    ImmutableArray<AttachedDocument> AttachedDocuments,
     RejectionDetails? RejectionDetails);

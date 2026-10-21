@@ -31,7 +31,7 @@ public sealed class ApproveLoanCaseHandler(
             return response;
         }
 
-        await snapshotService.ExecuteAsync(loanCase, ct);
+        await snapshotService.ExecuteAsync(loanCase, ct: ct);
         await loanCaseRepository.UpdateAsync(loanCase, ct);
         response.IsApproved = true;
 
